@@ -1,0 +1,9 @@
+[submodule "external/SaschaWillems"]
+	path = external/SaschaWillems
+	url = https://github.com/SaschaWillems/Vulkan.git
+[submodule "external/VulkanHpp-Compute-Sample"]
+	path = external/VulkanHpp-Compute-Sample
+	url = https://github.com/mcleary/VulkanHpp-Compute-Sample.git
+[submodule "external/Vulkan"]
+	path = external/Vulkan
+	url = https://github.com/SaschaWillems/Vulkan.git

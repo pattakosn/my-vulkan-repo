@@ -1,0 +1,6 @@
+# Ignore everything in this subdir
+*
+
+# Keep only the README.md and this .gitignore itself
+!README.md
+!.gitignore
