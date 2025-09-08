@@ -1,0 +1,1707 @@
+<!doctype html>
+<!--[if lt IE 7]> <html class="no-js ie6 oldie" lang="en"> <![endif]-->
+<!--[if IE 7]>    <html class="no-js ie7 oldie" lang="en"> <![endif]-->
+<!--[if IE 8]>    <html class="no-js ie8 oldie" lang="en"> <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en"> <!--<![endif]-->
+
+  <head>
+  <meta charset="utf-8">
+  <title>How to write a Vulkan driver in 2022</title>
+  <meta name="Description" content="An incredible amount has changed in Mesa and in the Vulkan ecosystems since we wrote the first Vulkan driver in Mesa for Intel hardware back in 2015. Here's a look at the latest Mesa utilities, helpers & best practices for writing Vulkan drivers." />
+  <meta name="Keywords" content="Collabora, Mesa, Vulkan, tutorial, driver, directory structure, meson, nvk_instance, physical devices, entrypoints, synchronization, open source" />
+
+  <base href="https://www.collabora.com/" />
+
+  <meta name = "viewport" content = "maximum-scale = 1.0, user-scalable = no, width = device-width" />
+  <!--[if IE]><meta http-equiv="cleartype" content="on" /><![endif]-->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="format-detection" content="telephone=no">
+  
+  <link rel="stylesheet" type="text/css" href="/assets/css/core.min.css">
+  <link rel="stylesheet" type="text/css" href="/assets/css/core-2016.min.css">
+  <link rel="stylesheet" type="text/css" href="/assets/css/misc-grouped-2016.min.css"/>
+  <link rel="stylesheet" type="text/css" href="/assets/css/jquery.fancybox.min.css"/>
+
+  <link rel="shortcut icon" href="/favicon.ico" />
+  <link rel="apple-touch-icon" href="/assets/images/icons/apple-touch-icon-precomposed.png" />
+  <link rel="apple-touch-icon" sizes="72x72" href="/assets/images/icons/apple-touch-icon-72x72-precomposed.png" />
+  <link rel="apple-touch-icon" sizes="114x114" href="/assets/images/icons/apple-touch-icon-114x114-precomposed.png" />
+  <link rel="apple-touch-startup-image" href="/assets/images/icons/startup.png" />
+
+  <!-- TWITTER CARD TAGS -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:site" content="Collabora | Open Source Consulting" />
+  <meta name="twitter:title" content="How to write a Vulkan driver in 2022" />
+  <meta name="twitter:description" content="An incredible amount has changed in Mesa and in the Vulkan ecosystems since we wrote the first Vulkan driver in Mesa for Intel hardware back in 2015. Here's a look at the latest Mesa utilities, helpers & best practices for writing Vulkan drivers." />
+  <meta name="twitter:image" content="https://www.collabora.com/assets/images/blog/Vulkan2022_CC.jpg" />
+
+  <!-- FB OG TAGS -->
+  <meta property="og:title" content="How to write a Vulkan driver in 2022" />
+  <meta property="og:site_name" content="Collabora | Open Source Consulting"/>
+  <meta property="og:url" content="https://www.collabora.com/news-and-blog/blog/2022/03/23/how-to-write-vulkan-driver-in-2022/" />
+  <meta property="og:description" content="An incredible amount has changed in Mesa and in the Vulkan ecosystems since we wrote the first Vulkan driver in Mesa for Intel hardware back in 2015. Here's a look at the latest Mesa utilities, helpers & best practices for writing Vulkan drivers." />
+  <meta property="og:type" content="article" />
+  <meta property="og:image" content="https://www.collabora.com/assets/images/blog/Vulkan2022_CC.jpg" />
+
+  <script>
+    if (/mobile/i.test(navigator.userAgent)) document.documentElement.className += ' w-mobile';
+  </script>
+
+  <!-- JS -->
+  <script type="text/javascript" src="/assets/js/jquery_v1.10.2.min.js"></script>
+
+  <!-- RSS FEED -->
+  <link rel="alternate" type="application/rss+xml" title="Collabora Blog RSS feed" href="https://www.collabora.com/newsroom-rss-feed.rss" />
+
+    <!-- noscript -->
+  <noscript>
+  <style>
+  .homepromosWrapper { margin-top: 0 !important; }
+  .mobilecontentTitleWrapper { display: block; }
+  .noJSmobilecontentTitleWrapper { display: none !important; }
+  #makeMeScrollable { display: none !important; }
+  #HeroElementBGImageLoader { display: none !important; }
+  #HeroElementBGImage { position: relative }
+  .noJSPromot { padding: 10px 2%; background-color: #F00; color: #fff; font-weight: 400; text-align: center; font-size: 15px; line-height: 20px; margin-bottom: 0; float: left; width: 96%;  }
+  @media (max-width: 767px) {
+    .bodyContent_2ndTier_RHS img {
+	margin-right: 0 !important;
+	width: 100%;
+    }
+  }
+  .industriesArticle_mainCol:nth-child(even) { margin-right: 0; }
+  .discTextDivWrapper { position: absolute; top: 50%; left: 50%; transform: translateX(-50%) translateY(-50%); display: block !important; }
+  .noJS_locationMap { width: 100%; height: auto; }
+  </style>
+  </noscript>
+  <!-- end of noscript -->
+
+<!-- Matomo // 06072022 -->
+<script>
+  var _paq = window._paq = window._paq || [];
+  /* tracker methods like "setCustomDimension" should be called before "trackPageView" */
+  _paq.push(['trackPageView']);
+  _paq.push(['enableLinkTracking']);
+  (function() {
+    var u="//matomo.collabora.com/";
+    _paq.push(['setTrackerUrl', u+'matomo.php']);
+    _paq.push(['setSiteId', '1']);
+    var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
+    g.async=true; g.src=u+'matomo.js'; s.parentNode.insertBefore(g,s);
+  })();
+</script>
+<!-- End Matomo Code -->
+
+<!-- Mastodon verification code // 30112022 -->
+<link rel="me" href="https://floss.social/@collabora">
+
+<link rel="stylesheet" href="/assets/components/quip/css/web.css" type="text/css" />
+</head>
+<body class="whiteBG">
+<!-- HEADER -->
+<div class="headerWrapper2016">
+<div class="headerWrapper2016Inner"><div class="scrolledNavBG"></div>
+
+<div class="container"> 
+    
+<div class="headerLHS_2016"> 
+    
+<a href="/" target="_self" title="Navigate to the Collabora website homepage">
+
+<!--[if IE]>
+<img src="/assets/images/core/Collabora_Logo.png" alt="Collabora Logo - Click/tap to navigate to the Collabora website homepage" class="logoFull2016">
+<![endif]-->
+
+<!--[if !IE]> -->
+<img src="/assets/images/core/Collabora_Logo.svg" alt="Collabora Logo - Click/tap to navigate to the Collabora website homepage" class="logoFull2016">
+
+
+
+<!-- <![endif]-->
+
+<!--<img src="/assets/images/core/Collabora_Logo_short.svg" alt="Collabora Logo - Click/tap to navigate to the Collabora website homepage" class="logoShort2016" style="display: none;">-->
+
+<!--<img src="/assets/images/core/logo.png" alt="Collabora Logo - Click/tap to navigate to the Collabora website homepage" class="logoFull2016">
+<img src="/assets/images/core/logo-short.png" alt="Collabora Logo - Click/tap to navigate to the Collabora website homepage" class="logoShort2016" style="display: none;">-->
+</a>
+ 
+</div>
+<div class="headerRHS_2016"> 
+        
+<!-- PRIMARY NAV -->
+
+<!-- Generate the widescreen navigation (#nav_full) -->
+<ul id="nav_full" >
+    <li><a href="about-us/" title="Navigate to the About page">About</a><ul>
+<div class="subnavTriangle"></div>
+<div class="subnavWrapper2016">
+<div class="subnavWrapperInner2016">
+<li class="first"><a href="about-us/who-we-are/" title="Navigate to the Who we are page" ><div class="subnavIcon subnavIcon_who-we-are"></div><span>Who we are</span></a></li>
+<li><a href="about-us/our-expertise.html" title="Navigate to the Our expertise page" ><div class="subnavIcon subnavIcon_our-expertise"></div><span>Our expertise</span></a></li>
+<li><a href="about-us/our-work.html" title="Navigate to the Our work page" ><div class="subnavIcon subnavIcon_our-work"></div><span>Our work</span></a></li>
+<li><a href="about-us/open-source.html" title="Navigate to the Open Source page" ><div class="subnavIcon subnavIcon_open-source"></div><span>Open Source</span></a></li>
+<li class="last"><a href="about-us/our-ecosystem/" title="Navigate to the Our ecosystem page" ><div class="subnavIcon subnavIcon_our-ecosystem"></div><span>Our ecosystem</span></a></li>
+
+</div>
+</div>
+</ul></li>
+<li><a href="services/" title="Navigate to the Services page">Services</a><ul>
+<div class="subnavTriangle"></div>
+<div class="subnavWrapper2016">
+<div class="subnavWrapperInner2016">
+<li class="first"><a href="services/guide.html" title="Navigate to the Guide page" ><div class="subnavIcon subnavIcon_guide"></div><span>Guide</span></a></li>
+<li><a href="services/train.html" title="Navigate to the Train page" ><div class="subnavIcon subnavIcon_train"></div><span>Train</span></a></li>
+<li><a href="services/build.html" title="Navigate to the Build page" ><div class="subnavIcon subnavIcon_build"></div><span>Build</span></a></li>
+<li><a href="services/integrate.html" title="Navigate to the Integrate page" ><div class="subnavIcon subnavIcon_integrate"></div><span>Integrate</span></a></li>
+<li><a href="services/optimize.html" title="Navigate to the Optimize page" ><div class="subnavIcon subnavIcon_optimize"></div><span>Optimize</span></a></li>
+<li class="last"><a href="services/maintain.html" title="Navigate to the Maintain page" ><div class="subnavIcon subnavIcon_maintain"></div><span>Maintain</span></a></li>
+
+</div>
+</div>
+</ul></li>
+<li><a href="industries/" title="Navigate to the Industries page">Industries</a><ul>
+<div class="subnavTriangle"></div>
+<div class="subnavWrapper2016">
+<div class="subnavWrapperInner2016">
+<li class="first"><a href="industries/automotive.html" title="Navigate to the Automotive page" ><div class="subnavIcon subnavIcon_automotive"></div><span>Automotive</span></a></li>
+<li><a href="industries/digital-tv.html" title="Navigate to the Digital TV page" ><div class="subnavIcon subnavIcon_digital-tv"></div><span>Digital TV</span></a></li>
+<li><a href="industries/silicon.html" title="Navigate to the Silicon page" ><div class="subnavIcon subnavIcon_silicon"></div><span>Silicon</span></a></li>
+<li><a href="industries/oem.html" title="Navigate to the OEM page" ><div class="subnavIcon subnavIcon_oem"></div><span>OEM</span></a></li>
+<li class="last"><a href="industries/xr.html" title="Navigate to the XR page" ><div class="subnavIcon subnavIcon_xr"></div><span>VR/AR</span></a></li>
+
+</div>
+</div>
+</ul></li>
+<li><a href="news-and-blog/" title="Navigate to the News &amp; Blog page">News &amp; Blog</a></li>
+<li><a href="careers.html" title="Navigate to the Careers page">Careers</a></li>
+<li><a href="contact-us.html" title="Navigate to the Contact page">Contact</a></li>
+
+</ul>
+
+<!-- Generate the new mobile navigation for inline treatment 20112014 -->
+<div id="nav_mobileInlineSolution">
+<p><a class="nav_mobileInlineTriggerNEW nav_mobileInlineTriggerNEW_TextLabel"><img src="/assets/images/core/2016hamburger.png" width="30" height="20" alt="Menu button" class="nav_mobileInlineTriggerNEW_Icon NEWmobileNavTrigger"></a></p>
+
+
+<div class="NEWmobileNavAnimWrapper">
+<ul class="NEWmobileNav"><li><a href="about-us/" title="Navigate to the About page">About</a></li>
+<li><a href="services/" title="Navigate to the Services page">Services</a></li>
+<li><a href="industries/" title="Navigate to the Industries page">Industries</a></li>
+<li><a href="news-and-blog/" title="Navigate to the News &amp; Blog page">News &amp; Blog</a></li>
+<li><a href="careers.html" title="Navigate to the Careers page">Careers</a></li>
+<li><a href="contact-us.html" title="Navigate to the Contact page">Contact</a></li>
+</ul>
+<!--</ul>-->
+<ul class="NEWmobileNavContactBits">
+<li class="NEWmobileNavContactLink"><a href="tel:+441223362967" target="_blank" title="Call Collabora today on +44 (0)1223 362967">+44 (0)1223 362967</a></li>
+<li class="NEWmobileNavContactLink"><a href="tel:+15146672499" target="_blank" title="Call Collabora today on +1 514 667 2499">+1 514 667 2499</a></li>
+<li class="NEWmobileNavContactLink"><a href="mailto:contact@collabora.com" target="_blank" title="Email Collabora today">contact@collabora.com</a></li>
+</ul>
+</div>
+
+
+</div>
+
+<!-- end of PRIMARY NAV --> 
+</div>
+ 
+</div>
+</div>
+</div>
+<!-- end of HERDER --> 
+
+
+ 
+<!-- HERO ELEMENT -->
+<div class="fullWidthWrapper2016"><div class="container">
+
+<!-- JWD - New WERE HIRING ELEMENT -->
+<div class="wereHiringSpeechBubbleWrapper">
+<a href="/careers/" title="We're hiring - check out our job vacancies"><img src="/assets/images/newsroom/hiring_speechBubble2.png" title="We're hiring!" alt="We're hiring!"/></a>
+</div>
+
+<div class="heroElementWrapper contentPage" style="background: #fff;">    
+    
+<!-- fake loader -->
+<img src="/assets/images/core/heroSizer_slimHero_01.jpg" id="HeroElementBGImageLoader" />
+<!-- end of fake loader -->
+
+<!--
+<img src="/assets/images/heros/slimHero_01.jpg" alt="*" title="*" id="HeroElementBGImage" />
+-->
+
+<img src="/assets/images/newsroom/blogposTpl_JWD-29032019.jpg" alt="*" title="*" id="HeroElementBGImage" />
+
+
+<!-- set temp loading height of .heroElementWrapper while #HeroElementBGImage images load -->
+<script type="text/javascript">
+
+/* v3 */
+
+var heroImageWrapper_height = $('#HeroElementBGImageLoader').height();
+$('.heroElementWrapper').css("height", heroImageWrapper_height +"px");
+//alert("Fake Loaded image height:" + heroImageWrapper_height);
+
+</script>
+<!-- end of set temp loading height of .heroElementWrapper while #HeroElementBGImage images load -->
+
+</div>    
+<!-- end of HERO ELEMENT --> 
+<!-- BODY CONTENT -->
+<div class="bodyContentWrapper darkGrey">
+<div class="bodyContentInnerWrapper" style="float: none !important;">
+
+<div class="news-blog-postTpls_breadcrumbWrapper">     
+<div class="breadcrumbWrapper">
+<!--
+<a href="/" title="Home">Home</a> <span style="margin-right:5px;">&raquo;</span>  
+ 
+ 
+ 
+<a href="news-and-blog/" title="News &amp; Blog">News &amp; Blog</a> <span style="margin-right:5px;">&raquo;</span>  
+ 
+<a href="news-and-blog/blog/" title="Blog">Blog</a> <span style="margin-right:5px;">&raquo;</span>  
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+How to write a Vulkan driver in 2022
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+ 
+ 
+
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+-->
+
+<ul id="breadcrumb">
+  <li><a href="/">Home</a></li><li><a href="news-and-blog/">News &amp; Blog</a></li><li><a href="news-and-blog/blog/">Blog</a></li>
+</ul>
+
+</div>
+</div>
+
+<!--<div class="mobilecontentTitleWrapper noJSmobilecontentTitleWrapper"><h1>How to write a Vulkan driver in 2022</h1></div>-->
+
+<div class="bodyContent_2ndTier_LHS blogpostLHS _2016blogpostLHS">
+
+<h2 class="blogNewsTitleWithAuthorAvatarBelow newsroom2019PostTitle">How to write a Vulkan driver in 2022</h2>
+
+<!--<p>Posted on 23/03/2022 by <a href="news-and-blog/blog/author/Mark Filion">Mark Filion</a></p>-->
+
+<!--
+<p class="blogAuthorP">
+<img src="assets/images/blog/author/gfxstrand.jpg" title="Faith Ekstrand" alt="Faith Ekstrand" class="blogAuthor"/>
+Posted on 23/03/2022 by Faith Ekstrand</p>
+-->
+
+<div class="blogAvatarGroupWrapper newsroom2019PostAuthor">
+
+<div class="blogAvatarPicWrapper">
+<img src="assets/images/blog/author/gfxstrand.jpg" alt="Faith Ekstrand avatar" class="blogAuthor"/>
+</div>
+<div class="blogAvatarTextWrapper">
+<!--<p class="blogAuthorP">Posted on 23/03/2022 by Faith Ekstrand</p>-->
+<p class="blogAuthorP">Faith Ekstrand <br/>March 23, 2022</p>
+</div>
+
+</div>
+
+
+<!-- Social Sharing -->
+<div class="blogSharingWrapper newsroom2019PostAuthorSocials">
+<div class="blogSharingWrapperInner">
+<p><span>Share this post:</span>
+<a onClick="window.open('http://twitter.com/intent/tweet?text=How to write a Vulkan driver in 2022 - https://www.collabora.com/news-and-blog/blog/2022/03/23/how-to-write-vulkan-driver-in-2022/','How to write a Vulkan driver in 2022','resizable,height=400,width=400'); return false;"><img src="/assets/images/blogsharing/socialShare_twitter-grey.png" title="Share on Twitter" /></a>
+<a href="https://www.linkedin.com/shareArticle?mini=true&url=https://www.collabora.com/news-and-blog/blog/2022/03/23/how-to-write-vulkan-driver-in-2022/&title=How to write a Vulkan driver in 2022&summary=An+incredible+amount+has+changed+in+Mesa+and+in+the+Vulkan+ecosystems+since+we+wrote+the+first+Vulkan+driver+in+Mesa+for+Intel+hardware+back+in+2015.+Here%27s+a+look+at+the+latest+Mesa+utilities%2C+helpers+%26+best+practices+for+writing+Vulkan+drivers.&source=LinkedIn" target="_blank"><img src="/assets/images/blogsharing/socialShare_linkedin-grey.png" title="Share on LinkedIn" /></a>
+<a onClick="window.open('https://www.facebook.com/sharer/sharer.php?u=https://www.collabora.com/news-and-blog/blog/2022/03/23/how-to-write-vulkan-driver-in-2022/&quote=','How to write a Vulkan driver in 2022','resizable,height=400,width=400'); return false;"><img src="/assets/images/blogsharing/socialShare_facebook-grey.png" title="Share on Facebook" /></a>
+
+<a onClick="window.open('https://floss.social/share?text=How to write a Vulkan driver in 2022 - https://www.collabora.com/news-and-blog/blog/2022/03/23/how-to-write-vulkan-driver-in-2022/','How to write a Vulkan driver in 2022','resizable,height=400,width=400'); return false;"><img src="/assets/images/blogsharing/socialShare_Matsodon.png" title="Share on Mastodon" /></a>
+
+<!--
+<a href="https://plus.google.com/share?url=https://www.collabora.com/news-and-blog/blog/2022/03/23/how-to-write-vulkan-driver-in-2022/" target="_blank"><img src="/assets/images/blogsharing/socialShare_google.png" title="Share on Google +" /></a>
+-->
+<a href="mailto:?subject=How to write a Vulkan driver in 2022&#038;body=An incredible amount has changed in Mesa and in the Vulkan ecosystems since we wrote the first Vulkan driver in Mesa for Intel hardware back in 2015. Here's a look at the latest Mesa utilities, helpers   best practices for writing Vulkan drivers. - Find out more by visiting https://www.collabora.com/news-and-blog/blog/2022/03/23/how-to-write-vulkan-driver-in-2022/" title="Share on email"><img src="/assets/images/blogsharing/socialShare_email.png" title="Share on Email" /></a>
+</p>
+</div>
+</div>
+<!-- end of Social Sharing -->
+
+<!-- Reading Time -->
+<script src="https://www.collabora.com/assets/js/blogReadingTime_js_v3.js"></script>
+<div class="estimatedReadingTimeWrapper"><p>Reading time: <span></span></p></div>
+<!-- end of Reading Time -->
+
+<div class="newsroom2019PostBodyWrapper">
+<p>An incredible amount has changed in Mesa and in the Vulkan ecosystems since we wrote the first Vulkan driver in Mesa for Intel hardware back in 2015. Not only has Vulkan grown, but Mesa has as well, and we've built up quite a suite of utilities and helpers for making writing Vulkan drivers easier. This blog post will be a tutorial of sorts (we won't have a functioning Vulkan driver in the end, sorry), showing off a bunch of those helpers and demonstrating the latest Mesa best practices for Vulkan drivers.</p>
+<h3>Writing a Vulkan driver in 2015</h3>
+<p>Vulkan in Mesa started with this git commit from Kristian Kristansen who was at Intel at the time:</p>
+<pre>commit 769785c497aaa60c629e0299e3ebfff53a8e393e
+Author: Kristian H&oslash;gsberg &lt;krh@bitplanet.net&gt;
+Date:   Fri May 8 22:32:37 2015 -0700
+
+    Add vulkan driver for BDW
+</pre>
+<p>Kristian, Chad Versace, and I had just pivoted from a different prototype project to working on Vulkan. Kristian started us off with a very skeletal start to a driver with lots of hard-coded values, just barely capable of drawing a triangle. We continued developing the driver internally (Vulkan was still under an NDA at the time) until we were <a href="https://lists.freedesktop.org/archives/mesa-announce/2016-February/000201.html" target="_blank" rel="nofollow noreferrer noopener">finally able to go public</a> on February 16 of 2016, when the Vulkan spec was released, and the NDA lifted.</p>
+<p>At the time we were developing ANV (the Intel Vulkan driver), the Vulkan spec itself was still under development and everything was constantly in flux. There were no best practices; there were barely even tools. Everyone working on Vulkan was making it up as they went because it was a totally new API. Most of the code we wrote was purpose-built for the Intel driver because there were no other Mesa drivers to share code. (Except for the short-lived LunarG Intel driver based in ilo, which we were replacing.) If we had tried to build abstractions, they could have gotten shot to pieces at any moment by a spec change. (We rewrote the descriptor set layout code from scratch at least five or six times before the driver ever shipped.) It was frustrating, exhausting, and a whole lot of fun.</p>
+<p>These days, however, the Vulkan spec has been stable and shipping for six years, the tooling and testing situation is pretty solid, and there are six Vulkan drivers in the Mesa tree with more on the way. We've also built up a lot of common infrastructure. This is important both because it makes writing a Vulkan driver easier and because it lets us fix certain classes of annoying bugs in a common place instead of everyone copying and pasting those bugs. So, without further ado, let's get down to it!</p>
+<h3>Directory structure</h3>
+<p>First off, every driver needs a name. We're not actually writing one here but it'll make the examples easier if we pretend we are. Just for the sake of example, I'm going to pick on NVIDIA because... Why not? Such a driver is clearly missing and really should happen soon. (Hint! Hint!) We're going to call this hypothetical new Vulkan driver NVK. It's short and obvious. If you don't like me picking on NVIDIA, just pretend it stands for "New VulKan" or nouvulkan, if you prefer.</p>
+<p>The first thing we need for this driver is a folder to put it in. Most Vulkan drivers live in <code>src/&lt;vendor&gt;/vulkan</code>. A typical directory structure looks something like this:</p>
+<pre>src/nvidia/:
+ |- meson.build
+ |- compiler
+ |   |- meson.build
+ |   |  ...
+ |- vulkan:
+ |   |- meson.build
+ |   |- nvk_private.h
+ |   |- nvk_device.c
+ |   |  ...
+ |  ...
+</pre>
+<p>If there is already a driver for OpenGL or OpenGL ES, it probably lives in <code>src/gallium/drivers/&lt;driver&gt;/</code>. If you want to re-use the compiler (you probably do) then it will have to be moved. You may also want to pull other common components into <code>src/&lt;vendor&gt;</code> such as an image memory layout calculation library, device info structures, or anything else which you want to share. You don't necessarily need to do all the code motion before starting on Vulkan, but you'll want to do it early in the project before it becomes a headache.</p>
+<p>Put the following in <code>src/&lt;vendor&gt;/vulkan/meson.build</code> and adjust as needed for your driver:</p>
+<div class="gl-relative markdown-code-block js-markdown-code">
+<pre>nvidia_icd = custom_target(
+  'nvidia_icd',
+  input : [vk_icd_gen, vk_api_xml],
+  output : 'nvidia_icd.@0@.json'.format(host_machine.cpu()),
+  command : [
+    prog_python, '@INPUT0@',
+    '--api-version', '1.3', '--xml', '@INPUT1@',
+    '--lib-path', join_paths(get_option('prefix'), get_option('libdir'),
+                             'libvulkan_nvidia.so'),
+    '--out', '@OUTPUT@',
+  ],
+  build_by_default : true,
+  install_dir : with_vulkan_icd_dir,
+  install : true,
+)
+
+nvk_files = files( )
+
+nvk_deps = [ ]
+
+libvulkan_nvidia = shared_library(
+  'vulkan_nvidia',
+  [ nvk_files ],
+  include_directories : [ inc_include, inc_src, ],
+  dependencies : nvk_deps,
+  gnu_symbol_visibility : 'hidden',
+  install : true,
+)
+</pre>
+<p>This will build a new shared library, <code>libvulkan_nvidia.so</code>, as well as an ICD file named <code>nvidia_icd.&lt;arch&gt;.json</code> which points to it, when installed. There are many details in here around how Vulkan drivers get loaded on multi-arch systems, which I will ignore because they're very boring.</p>
+<h3>Dispatch</h3>
+<p>Before we can start implementing Vulkan entrypoints, we need to set up the dispatch infrastructure. Put the following (and modify as needed) into <code>src/&lt;vendor&gt;/vulkan/meson.build</code>:</p>
+<pre>nvk_entrypoints = custom_target(
+  'nvk_entrypoints',
+  input : [vk_entrypoints_gen, vk_api_xml],
+  output : ['nvk_entrypoints.h', 'nvk_entrypoints.c'],
+  command : [
+    prog_python, '@INPUT0@', '--xml', '@INPUT1@', '--proto', '--weak',
+    '--out-h', '@OUTPUT0@', '--out-c', '@OUTPUT1@', '--prefix', 'nvk',
+  ],
+  depend_files : vk_entrypoints_gen_depend_files,
+)
+</pre>
+<p>This will generate two files: <code>nvk_entrypoints.h</code> and <code>nvk_entrypoints.c</code>. The first contains function prototypes for every Vulkan entrypoint with the <code>vk</code> prefix replaced with <code>&lt;prefix&gt;_</code>. For example, since we passed <code>--prefix nvk</code> to the generation script, <code>vkCreateDevice()</code> will be named <code>nvk_CreateDevice()</code>. The second file, <code>nvk_entrypoints.c</code> contains generated entrypoint tables containing your entrypoints. You don't have to do anything special to declare what entrypoints you actually define. Thanks to a bit of compiler magic, any entrypoints you don't define will show up as <code>NULL</code> in the table.</p>
+<p dir="auto" data-sourcepos="162:1-165:14">To ensure these get added into your driver library, you'll need to add <code>nvk_entrypoints</code> to the input list in your <code>shared_library()</code> call and <code>idep_vulkan_util</code> and <code>idep_vulkan_runtime</code> to <code>nvk_deps in your </code>meson.build`:</p>
+<pre>nvk_files = files( )
+
+nvk_deps = [
+  idep_vulkan_runtime,
+  idep_vulkan_util,
+]
+
+libvulkan_nvidia = shared_library(
+  'vulkan_nvidia',
+  [ nvk_entrypoints, nvk_files ],
+  include_directories : [ inc_include, inc_src, ],
+  dependencies : nvk_deps,
+  gnu_symbol_visibility : 'hidden',
+  install : true,
+)
+</pre>
+<p>(<strong>Note:</strong> The weak function pointers used to implement entrypoint tables occasionally break in strange ways depending on link order. The solution is to ensure that anything which pulls in intermediate libraries which contain Vulkan entrypoints is linked with <code>link_whole</code>, unless you're using the Visual Studio compiler. See <code>src/vulkan/runtime/meson.build</code> for more details.)</p>
+<h3>Setting up the instance</h3>
+<p>We're about to start defining structs that are part of your new Vulkan driver so we'll need somewhere to put them. Most Vulkan drivers in Mesa today lump everything into <code>&lt;prefix&gt;_private.h</code> because we did that with ANV, and everyone copied+pasted that structure. If you want to be a bit better organized, go for it! We'll use <code>nvk_private.h</code> because I'm boring and don't want to strain my brain just for a blog post.</p>
+<p>In <code>nvk_private.h</code>, we'll need to define a <code>nvk_instance</code> struct to hold our instance and any related data, so we'll put the following in <code>nvk_private.h</code>:</p>
+<pre><span style="color: #999999;"><strong>#include "nvk_entrypoints.h"
+#include "vulkan/runtime/vk_instance.h"
+#include "vulkan/runtime/vk_log.h"
+#include "vulkan/util/vk_alloc.h"</strong></span>
+
+<strong>struct <span style="color: #445588;">nvk_instance</span></strong> {
+   <strong>struct <span style="color: #445588;">vk_instance</span></strong> vk;
+
+  <span style="color: #999988;"> <em>/* Any other stuff you want goes here */</em></span>
+};
+
+VK_DEFINE_HANDLE_CASTS(nvk_instance, vk.base, VkInstance,
+                       VK_OBJECT_TYPE_INSTANCE)
+</pre>
+<p>As you can see, the first element of our <code>nvk_instance</code> struct is a <code>vk_instance</code> called <code>vk</code>. This acts as the base class for all Vulkan instances in Mesa and stores a bunch of useful stuff for debug logging, dispatch, etc. If you look at the definition of <code>vk_instance</code>, you'll see that its first member is <code>vk_object_base</code>. Every Vulkan object in your driver <em>must</em> be derived from <code>vk_object_base</code> and the base struct must always be the first member. This is because there are a few things which use void pointer casts because of C's lack of support for proper subclassing. However, it's not as bad as you may think because we do have mechanisms for attempting to verify a <code>vk_object_base</code> pointer at runtime, so it's not quite as unsafe as it sounds.</p>
+<p>The <code>VK_DEFINE_HANDLE_CASTS</code> macro defines a pair of functions: <code>nvk_instance_to_handle()</code> and <code>nvk_instance_from_handle()</code> which do about what you'd expect: convert a <code>VkInstance</code> to and from a <code>struct nvk_instance *</code>. These also enable the use of the <code>VK_FROM_HANDLE()</code> macro, which we'll see shortly. When converting from a <code>VkInstance</code> to a <code>nvk_instance</code> pointer, we assert at runtime that the object type is <code>VK_OBJECT_TYPE_INSTANCE</code> to provide a bit of added type safety because some handle types just map to <code>uint64_t</code> and so have no real compile-time type information.</p>
+<p>Now that we have the header file in shape, it's time for some code. We'll create a new file called <code>nvk_device.c</code> for all our instance and device-level stuff. (Again, yes, we could stand to be better organized.) We'll start with our table of supported instance extensions:</p>
+<pre><strong>#include "nvk_private.h"</strong>
+
+<strong>static const struct <span style="color: #445588;">vk_instance_extension_table</span></strong> instance_extensions = {
+   .KHR_get_physical_device_properties2   = <span style="color: #0086b3;">true</span>,
+   .EXT_debug_report                      = <span style="color: #0086b3;">true</span>,
+   .EXT_debug_utils                       = <span style="color: #0086b3;">true</span>,
+};
+</pre>
+<p>You may want more than this eventually, but these three you'll want to implement right away. Both VK_EXT_debug_report and VK_EXT_debug_utils will be implemented for you if you use the right base structs. All you have to do is advertise them. KHR_get_physical_device_properties2 is one you'll have to implement, but it's basically required for Vulkan these days, so there's no sense in waiting.</p>
+<p>Next, we implement <code>nvk_CreateInstance()</code>:</p>
+<pre>VKAPI_ATTR VkResult VKAPI_CALL
+<span style="color: #990000;"><strong>nvk_CreateInstance</strong></span>(<strong>const</strong> VkInstanceCreateInfo *pCreateInfo,
+                   <strong>const</strong> VkAllocationCallbacks *pAllocator,
+                   VkInstance *pInstance)
+{
+   <strong>struct <span style="color: #445588;">nvk_instance</span></strong> *instance;
+   VkResult result;
+
+   <strong>if</strong> (pAllocator == <span style="color: #0086b3;">NULL</span>)
+      pAllocator = vk_default_allocator();
+
+   instance = vk_alloc(pAllocator, <strong>sizeof</strong>(*instance), <span style="color: #0086b3;">8</span>,
+                       VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+   <strong>if</strong> (!instance)
+      <strong>return</strong> vk_error(<span style="color: #0086b3;">NULL</span>, VK_ERROR_OUT_OF_HOST_MEMORY);
+
+   <strong>struct <span style="color: #445588;">vk_instance_dispatch</span></strong>_table dispatch_table;
+   vk_instance_dispatch_table_from_entrypoints(
+      &amp;dispatch_table, &amp;nvk_instance_entrypoints, <span style="color: #0086b3;">true</span>);
+
+   result = vk_instance_init(&amp;instance-&gt;vk, &amp;instance_extensions,
+                             &amp;dispatch_table, pCreateInfo, pAllocator);
+   <strong>if</strong> (result != VK_SUCCESS) {
+      vk_free(pAllocator, instance);
+      <strong>return</strong> result;
+   }
+
+   <span style="color: #999988;"><em>/* Initialize driver-specific stuff */</em></span>
+
+   *pInstance = nvk_instance_to_handle(instance);
+
+   <strong>return</strong> VK_SUCCESS;
+}
+</pre>
+<p>Let's start with allocation. Most vulkan entrypoints which create or destroy an object take a <code>VkAllocationCallbacks</code> pointer, which you're supposed to use to allocate memory for the object. Working with these manually is tedious at best so we provide helpful <code>vk_alloc/free</code> which allocate with respect to the requested allocator. The <code>vk_alloc2/free2</code> versions take two allocators and implement the required fall-back. We also provide <code>vk_default_allocator()</code> which is an allocator that maps everything to the C standard library <code>malloc/free()</code>. These and a few other nifty allocation helpers can be found in <code>src/vulkan/util/vk_alloc.h</code>.</p>
+<p>Before we can actually initialize the base <code>vk_instance</code>, we need to convert our entrypoint table to a dispatch table. The entrypoint table generator we invoked earlier generates a <code>vk_entrypoint_table</code> but <code>vk_instance_init</code> wants a <code>vk_dispatch_table</code>. What's the difference, and why are there two of them? That's a topic for another day. The short version is that the conversion deals with de-duplicating entrypoints from when an extension gets promoted.</p>
+<p>Finally, we can actually initialize our <code>vk_instance</code> by calling <code>vk_instance_init()</code>. This function does a bit more than just initialize a data structure. It sets up all the logging infrastructure for instance create logging through VK_EXT_debug_utils. It also does a few Vulkan API version number checks and checks to ensure that every extension specified by <code>VkInstanceCreateInfo::ppEnabledExtensionNames</code> is actually supported by your implementation and returns <code>VK_ERROR_EXTENSION_NOT_PRESENT</code> if an unsupported extension is requested.</p>
+<p>And there you go! You've created your first <code>VkInstance</code> object. For completeness, we should also implement <code>vkDestroyInstance()</code>:</p>
+<pre>VKAPI_ATTR <span style="color: #445588;"><strong>void</strong></span> VKAPI_CALL
+<span style="color: #990000;"><strong>nvk_DestroyInstance</strong></span>(VkInstance _instance,
+                    <strong>const</strong> VkAllocationCallbacks *pAllocator)
+{
+   VK_FROM_HANDLE(nvk_instance, instance, _instance);
+
+   <strong>if</strong> (!instance)
+      <strong>return</strong>;
+
+   vk_instance_finish(&amp;instance-&gt;vk);
+   vk_free(&amp;instance-&gt;vk.alloc, instance);
+}
+</pre>
+<p>Before we brush past it, there is one interesting thing here: the call to <code>VK_FROM_HANDLE()</code>. This macro declares a pointer to a <code>struct nvk_instance</code> and initializes it with <code>nvk_instance_to_handle(_instance)</code>. Because these sorts of casts are so prevalent in a Vulkan driver, especially at the tops of entrypoints, having a macro for it helps the ergonomics a good bit.</p>
+<p>Now that we have an instance, we can implement <code>vkGetInstanceProcAddr()</code> trivially as it's just a wrapper around a helper provided in <code>vk_instance.h</code>:</p>
+<pre>VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL
+<span style="color: #990000;"><strong>nvk_GetInstanceProcAddr</strong></span>(VkInstance _instance,
+                        <strong>const <span style="color: #445588;">char</span></strong> *pName)
+{
+   VK_FROM_HANDLE(nvk_instance, instance, _instance);
+   <strong>return</strong> vk_instance_get_proc_addr(&amp;instance-&gt;vk,
+                                    &amp;nvk_instance_entrypoints,
+                                    pName);
+}
+
+PUBLIC VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL
+<span style="color: #990000;"><strong>vk_icdGetInstanceProcAddr</strong></span>(VkInstance instance,
+                          <strong>const <span style="color: #445588;">char</span></strong> *pName);
+
+
+PUBLIC VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL
+<span style="color: #990000;"><strong>vk_icdGetInstanceProcAddr</strong></span>(VkInstance instance,
+                          <strong>const <span style="color: #445588;">char</span></strong> *pName)
+{
+   <strong>return</strong> nvk_GetInstanceProcAddr(instance, pName);
+}
+</pre>
+<p>The last bit adds a wrapper, so we also expose the more loader-friendly <code>vk_icdGetInstanceProcAddr()</code>. For more details about the loader interface, see the <a href="https://github.com/KhronosGroup/Vulkan-Loader/blob/master/docs/LoaderDriverInterface.md" target="_blank" rel="nofollow noreferrer noopener">loader driver interface doc</a>.</p>
+<h3>Logging</h3>
+<p>Before we get into creating other objects, we should explain that <code>vk_error()</code> call in <code>nvk_CreateInstance()</code>. This is part of the broader common logging framework found in <code>src/vulkan/runtime/vk_log.h</code>. Any messages logged through this framework automatically get broadcast to <code>stderr</code> in debug builds, the Android logging framework if you've built for Android, and passed to the client via VK_EXT_debug_report and VK_EXT_debug_utils.</p>
+<p>For most log messages, use the <code>vk_log*</code> family of macros. These are printf-like macros and support anything that your C standard library's <code>printf()</code> call does. For instance, to log a debug-level message on a device, do:</p>
+<pre>vk_logd(VK_LOG_OBJS(device), <span style="color: #d14;">"vkDeviceWaitIdle() took %u us"</span>, wait_time);
+</pre>
+<p>The <code>VK_LOG_OBJS()</code> macro can take up to 8 objects which will be passed along with the message to any <code>VkDebugUtilsMessangerEXT</code>s. If you want to log something on the instance only, with no objects, you can use <code>VK_LOG_NO_OBJS(instance)</code> instead. If <code>VK_LOG_NO_OBJS(NULL)</code> is used, then the message will only go to <code>stderr</code> and the Android logging framework because we can't get the list of messengers.</p>
+<p>For errors, there is a special <code>vk_error()</code> macro which takes a <code>VkResult</code> and generates a log message containing the error. If you want to provide additional information in the log message, the <code>vk_errorf()</code> macro is a printf-like macro which generates the same message as <code>vk_error()</code> but with your log message appended. The typical pattern is to wrap each error in a <code>vk_error()</code> or <code>vk_errorf()</code> wherever the error was originally generated. If you're propagating errors from some other function, there's no need to wrap because it's already been logged. We already saw one example when creating our instance above:</p>
+<pre>instance = vk_alloc(pAllocator, <strong>sizeof</strong>(*instance), 8,
+                    VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+<strong>if</strong> (!instance)
+   <strong>return <span style="color: #990000;">vk_error</span></strong>(<span style="color: #0086b3;">NULL</span>, VK_ERROR_OUT_OF_HOST_MEMORY);
+</pre>
+<p>Here's another example from ANV's <code>vkMapMemory()</code> implementation:</p>
+<pre><strong>if</strong> (mem-&gt;map != <span style="color: #0086b3;">NULL</span>) {
+   <strong>return</strong> vk_errorf(device, VK_ERROR_MEMORY_MAP_FAILED,
+                    <span style="color: #d14;">"Memory object already mapped."</span>);
+}</pre>
+<p>Both macros take an object as their first parameter, the object generating the error. For object creation errors (like out of memory), this should be the parent object, typically a device or instance. If you don't have a parent object (such as in <code>vkCreateInstance()</code>), you can pass in <code>NULL</code>. As with other logging, this means that it won't show up in any client call-backs.</p>
+<h3>Physical devices</h3>
+<p>Physical devices look much the same as instances:</p>
+<pre><strong>struct <span style="color: #445588;">nvk_physical_device</span></strong> {
+   <strong>struct <span style="color: #445588;">vk_physical_device</span></strong> vk;
+
+   <span style="color: #999988;"><em>/* Driver-specific stuff */</em></span>
+};
+
+VK_DEFINE_HANDLE_CASTS(nvk_physical_device, vk.base, VkPhysicalDevice,
+                       VK_OBJECT_TYPE_PHYSICAL_DEVICE)
+</pre>
+<p>We won't spend too much time on the struct, initialization, etc. If you've written much C code at all, you know the pattern. One difference between physical devices an instances is when they are created. The instance has an explicit <code>vkCreateInstance()</code> entrypoint whereas physical devices get created implicitly at some unknown time between <code>vkCreateInstance()</code> and the first call to <code>vkEnumeratePhysicalDevice()</code>. Most Mesa Vulkan drivers do the actual walking of <code>/dev/dri</code> and creation of corresponding physical devices as part of the first <code>vkEnumeratePhysicalDevice()</code> to make instance creation faster. I don't know that this has any tangible benefits but it's the common pattern in Mesa today.</p>
+<p>One other difference from instance initialization which may be useful is that, while <code>vk_physical_device_init()</code> takes a <code>vk_device_extensions</code> struct of supported device extensions, you can also pass NULL and it will simply <code>memset()</code> the table to all false so you can fill it out yourself later. This is because determining feature support often requires that a bunch of the physical device initialization work has already been done. Allowing drivers to re-order initialization such that determining feature support happens late in the process makes things a bit easier. I don't personally like this and, one day, I'd like to have a better-defined point at which the <code>vk_physical_device</code> is fully initialized, but it's convenient for now.</p>
+<p>If a client is going to use your physical device, they're going to need to know about supported features, so the next step is to implement <code>vkGetPhysicalDeviceFeatures2()</code> and <code>vkGetPhysicalDeviceProperties2()</code>. Note the 2. Don't bother implementing the original Vulkan 1.0 calls unless you really want to. If it's missing from your dispatch table, we'll implement it for you in terms of <code>vkGetPhysicalDeviceFeatures2()</code> or <code>vkGetPhysicalDeviceProperties2()</code>. Here's what a <code>vkGetPhysicalDeviceFeatures2()</code> implementation might look like:</p>
+<pre>VKAPI_ATTR <span style="color: #445588;"><strong>void</strong></span> VKAPI_CALL
+<span style="color: #990000;"><strong>nvk_GetPhysicalDeviceFeatures2</strong></span>(VkPhysicalDevice physicalDevice,
+                                 VkPhysicalDeviceFeatures2 *pFeatures)
+{
+   VK_FROM_HANDLE(nvk_physical_device, pdevice, physicalDevice);
+
+   pFeatures-&gt;features = (VkPhysicalDeviceFeatures) {
+      .robustBufferAccess = <span style="color: #0086b3;">true</span>,
+      <span style="color: #999988;"><em>/* More features */</em></span>
+   };
+
+   VkPhysicalDeviceVulkan11Features core_1_1 = {
+      .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
+      <span style="color: #999988;"><em>/* Vulkan 1.1 features */</em></span>
+   };
+
+   VkPhysicalDeviceVulkan12Features core_1_2 = {
+      .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
+      <span style="color: #999988;"><em>/* Vulkan 1.2 features */</em></span>
+   };
+
+   VkPhysicalDeviceVulkan13Features core_1_3 = {
+      .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
+      <span style="color: #999988;"><em>/* Vulkan 1.3 features */</em></span>
+   };
+
+   vk_foreach_struct(ext, pFeatures-&gt;pNext) {
+      <strong>if</strong> (vk_get_physical_device_core_1_1_feature_ext(ext, &amp;core_1_1))
+         <strong>continue</strong>;
+      <strong>if</strong> (vk_get_physical_device_core_1_2_feature_ext(ext, &amp;core_1_2))
+         <strong>continue</strong>;
+      <strong>if</strong> (vk_get_physical_device_core_1_3_feature_ext(ext, &amp;core_1_3))
+         <strong>continue</strong>;
+
+      <strong>switch</strong> (ext-&gt;sType) {
+      <strong>case</strong> VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_4444_FORMATS_FEATURES_EXT: {
+         VkPhysicalDevice4444FormatsFeaturesEXT *features = (void *)ext;
+         features-&gt;formatA4R4G4B4 = <span style="color: #0086b3;">true</span>;
+         features-&gt;formatA4B4G4R4 = <span style="color: #0086b3;">true</span>;
+         <strong>break</strong>;
+      }
+      <span style="color: #999988;"><em>/* More feature structs */</em></span>
+      default:
+         <strong>break</strong>;
+      }
+   }
+}
+</pre>
+<p>Most of this is pretty self-explanatory, but there's some bits around core features and properties that we should discuss. The <code>vk_get_physical_device_core_1_1_feature_ext()</code> call at the top of our loop checks to see if the provided extension struct is <code>VkPhysicalDeviceVulkan11Features</code> or is from an extension promoted to core in Vulkan 1.1 and, if it is, fills it out from the <code>VkPhysicalDeviceVulkan11Features</code> struct we passed in, and returns true to let us know it's been handled. There are helpers like this for every major Vulkan version. This allows us to avoid any possible mismatches between features advertised through extensions and those advertised through the core structs.</p>
+<p>One thing you don't need to worry about implementing is <code>vkEnumerateDeviceExtensionProperties()</code>. Because the table of supported extensions lives in the <code>vk_physical_device</code>, we can implement that one for you in common code. This saves you the headache of dealing with extension name strings and lets us handle certain annoying Android corner cases for you.</p>
+<p>To satisfy the <a href="https://github.com/KhronosGroup/Vulkan-Loader/blob/master/docs/LoaderDriverInterface.md" target="_blank" rel="nofollow noreferrer noopener">loader driver interface requirements</a>, you'll also need to implement <code>vk_icdGetPhysicalDeviceProcAddr()</code>:</p>
+<pre>PUBLIC VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL
+<span style="color: #990000;"><strong>vk_icdGetPhysicalDeviceProcAddr</strong></span>(VkInstance  _instance,
+                                <strong>const <span style="color: #445588;">char</span></strong>* pName);
+
+PUBLIC VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL
+<span style="color: #990000;"><strong>vk_icdGetPhysicalDeviceProcAddr</strong></span>(VkInstance  _instance,
+                                <strong>const <span style="color: #445588;">char</span></strong>* pName)
+{
+   VK_FROM_HANDLE(nvk_instance, instance, _instance);
+   <strong>return</strong> vk_instance_get_physical_device_proc_addr(&amp;instance-&gt;vk, pName);
+}
+</pre>
+<h3>Common implementation of entrypoints</h3>
+<p>I mentioned above, without much explanation, that if you don't implement <code>vkGetPhysicalDeviceFeatures()</code> that it will get implemented in terms of <code>vkGetPhysicalDeviceFeatures2()</code>. How does this work? I'm so very glad you asked! Let's take a moment to properly explore this.</p>
+<p>Inside the Vulkan runtime code in Mesa located in <code>src/vulkan/runtime</code>, we have a set of entrypoint tables using the <code>vk_common_</code> prefix. These are used to implement a variety of functionality ranging from trivial wrappers to full complex implementations of whole object types. As part of <code>vk_instance_init()</code> or <code>vk_device_init()</code>, we look for <code>NULL</code> function pointers in your dispatch table and fill them with common implementations if a common implementation exists. We do this regardless of whether or not you actually support the feature and trust the <code>vkGet*ProcAddr()</code> implementation to return <code>NULL</code> for unsupported entrypoints. If you're looking to see if the runtime code has an implementation of <code>vkFoo()</code>, search for <code>vk_common_Foo()</code> and that should find it.</p>
+<p>One of the most common uses of this is to implement <code>vkFoo()</code> in terms of <code>vkFoo2()</code>. If you're implementing something where the latest Vulkan spec has both a <code>vkFoo()</code> and a <code>vkFoo2()</code>, you should always skip <code>vkFoo()</code> and go straight to <code>vkFoo2()</code> unless you really want to implement both. This will work even if you don't expose the Vulkan core version or extension that provides <code>vkFoo2()</code>. If a wrapper does not yet exist for the entrypoint you're implementing, make a merge request to add one.</p>
+<h3>Devices and Queues</h3>
+<p>Device creation looks much the same as instance creation as far as the common Vulkan runtime code goes. There is an explicit <code>vkCreateDevice()</code> entrypoint in which you need to create your device and <code>vk_device_init</code> takes a dispatch table and <code>pCreateInfo</code> just like <code>vk_instance_init()</code>. As with instances, <code>vk_device_init()</code> checks to ensure that every extension specified by <code>VkDeviceCreateInfo::ppEnabledExtensionNames</code> is actually supported according to the table of supported extensions in the <code>vk_physical_device</code> and returns <code>VK_ERROR_EXTENSION_NOT_PRESENT</code> if an unsupported extension is requested.</p>
+<p>With your device, you'll also need to create queues. These also have a base struct called <code>vk_queue</code>. As with physical devices, queues are weird in that the spec doesn't say when they get created. It must be between <code>vkCreateDevice()</code> and the first call to <code>vkGetDeviceQueue()</code> which requests it. All Mesa drivers create them as part of <code>vkCreateDevice()</code>. This allows us to maintain a list of queues inside the <code>vk_device</code> and implement <code>vkGetDeviceQueue()</code> and <code>vkGetDeviceQueue2()</code> for you.</p>
+<p>Of course, your devices and queues will need to be more than a bare <code>vk_device</code> or <code>vk_queue</code>. You'll likely also need data structures for memory allocation, handles to various kernel driver resources, etc. Then, you'll need to implement the various APIs around allocating and binding memory, creating images, buffers, and other Vulkan objects, etc. We won't cover any of that in detail here because there's not much we can do to help in common code just yet; it's mostly vendor-specific.</p>
+<h3>Synchronization</h3>
+<p>Before you get too excited and start to implement <code>VkFence</code>, <code>VkSemaphore</code>, and <code>vkQueueSubmit()</code>, stop. Unless you are a very special driver such as venus, which is implementing Vulkan pass-through for VMs, you should not be implementing synchronization yourself. You will get it wrong.</p>
+<p>Instead, we have a common synchronization framework built around <code>vk_sync</code> objects. In <code>vk_physical_device</code>, there is a <code>supported_sync_types</code> array which describes each <code>vk_sync_type</code> supported by your implementation. If your driver uses DRM sync objects (it should!), a <code>vk_sync</code> implementation is provided for you in <code>vk_drm_syncobj.h</code>. For any other synchronization type such as BO-based synchronization for talking with X11 or amdgpu's internal sync handles, you can implement your own <code>vk_sync_type</code>, which describes the capabilities of the synchronization primitive and provides hooks for various operations such as waiting on it or signaling it from the CPU. Once you've provided some <code>vk_sync_types</code>, <code>VkFence</code> and <code>VkSemaphore</code> are taken care of for you by common code.</p>
+<p>Your driver will also need to fill out <code>vk_queue::driver_submit</code> with a function that handles submission to the kernel driver. We provide implementations of <code>vkQueueSubmit()</code> and <code>vkQueueBindSparse()</code> in terms of this hook. This allows us to implement both userspace emulated and kernel assisted timeline semaphores for you. The cross-process negotiation that makes timeline semaphores on Linux possible is extremely tricky and subtle; you will get it wrong if you try to do it yourself.</p>
+<p>If you want timeline semaphores, there are currently two options on Linux. The first and better option is to implement DRM sync object timeline support in your kernel driver. If you do, <code>vk_drm_syncobj_get_type()</code> will return a type with syncobj support, <code>VkSemaphore</code> will advertise cross-process sharing support for timelines, and we'll take care of the negotiation stuff for you. If your kernel doesn't support timeline DRM sync objects, you can use <code>vk_sync_timeline</code>, which emulates timelines using another binary <code>vk_sync_type</code>. The former is preferred because it supports sharing, but the emulation may be necessary for supporting Vulkan 1.2 on older kernel drivers.</p>
+<p>Everything I've outlined so far is about Linux, but it should work fine on Windows too. Things are actually quite a bit simpler there because the built-in synchronization primitive already does timelines. When working on the synchronization framework, I typed up <a href="https://gitlab.freedesktop.org/mesa/mesa/-/merge_requests/15122" target="_blank" rel="nofollow noreferrer noopener">support for WDDM2 fences</a> to prove that it works. It's sitting in a WIP state and isn't exactly well-tested because we don't have any Windows drivers to use it yet, but it should work.</p>
+<h3>Command buffers and pools</h3>
+<p>We provide base <code>vk_command_pool</code> and <code>vk_command_buffer</code> structs which you should use. These are required for our generic implementation of VK_EXT_debug_utils and its command buffer tagging. You also get a few little things for free such as <code>vkResetCommandPool()</code>.</p>
+<p>The other big thing that using <code>vk_command_buffer</code> will get you soon is a common capture/replay solution for secondary command buffers. Boris Brezillon at Collabora has <a href="https://gitlab.freedesktop.org/mesa/mesa/-/merge_requests/14406" target="_blank" rel="nofollow noreferrer noopener">a merge request</a> posted, which implements this and enables it for panvk. Implementing secondary command buffers directly is recommended since it's likely better for performance on most hardware. However, some hardware really can't do better than capture/replay, in which case this will let us handle all those capture/replay details in common code.</p>
+<h3>Images and views</h3>
+<p>There are also <code>vk_image</code> and <code>vk_image_view</code> base structs which you can optionally use in your driver. Unlike most of the base objects we've discussed so far, these don't really do anything. They just hold copies of all the image and view creation parameters for you. However, given the number of places in the API where a size, format, or number of layers is pulled implicitly from the image view, you'll need at least some of this information on hand. We also deal with the image usage vs. view usage distinction added in VK_KHR_maintenance1 for you in case that matters for your driver.</p>
+<p>Even though these structs are currently optional, and the immediate value isn't huge, I expect we'll be building more common code which uses them in the future. You'll probably want to get onboard eventually.</p>
+<h3>Render passes</h3>
+<p>Whether or not you need real render passes is a decision only you can make. Some hardware gets real benefit from re-ordering and combining subpasses within a render pass. However, for most desktop hardware, there's no real point and we just want to blast commands into a buffer. If you don't care about subpass re-ordering or combining, then you don't need to bother implementing render passes at all.</p>
+<p>Landed just this week is <a href="https://gitlab.freedesktop.org/mesa/mesa/-/merge_requests/14961" target="_blank" rel="nofollow noreferrer noopener">a merge request</a> which implements all of render passes in terms of VK_KHR_dynamic_rendering. All you have to do is implement <code>vkCmdBeginRendering()</code> and <code>vkCmdEndRendering()</code>. For the couple of places where render passes are passed into the API, there are helpers which return you a <code>VK_KHR_dynamic_rendering</code> version of the relevant data. For driers which don't care about subpass combining, this is a fantastic simplification. The ANV (Intel) patch is +926/-2633 lines of code and the new code is not only shorter but way easier to read and understand.</p>
+<p>If you choose to use the common render pass implementation, your driver will need to use <code>vk_image</code> and <code>vk_image_view</code> as we need to be able to introspect images and views.</p>
+<h3>Final comments</h3>
+<p>Before we wrap up, there's a few odds and ends that should be addressed but don't really deserve their own section:</p>
+<ul>
+<li>We haven't discussed compilers at all. There's a huge common infrastructure for that in Mesa called NIR which you'll be using. You can read about it in <a href="https://www.gfxstrand.net/faith/blog/2022/01/in-defense-of-nir/" target="_blank" rel="nofollow noreferrer noopener">my recent blog post about NIR</a>. Before anyone asks, no, you cannot bring your own SPIR-V parser and just use LLVM.</li>
+<li>We implement VK_EXT_private_data for you. This is a big part of why we made <code>vk_object_base</code> in the first place. Assuming you used base objects everywhere, everything needed for the extension is already in place. Just turn it on.</li>
+<li>I'm working on <a href="https://gitlab.freedesktop.org/mesa/mesa/-/merge_requests/13184" target="_blank" rel="nofollow noreferrer noopener">a common <code>VkPipelineCache</code> implementation</a> which has been making progress but isn't quite ready yet.</li>
+<li>There are common <code>vk_shader_module</code> and <code>vk_framebuffer</code> objects that simply capture the input parameters. These are optional and there for you to use if you want. Not much relies on these yet. There is a SPIR-V to NIR helper which uses <code>vk_shader_module</code> if you choose to use it, but there is also a version that takes the SPIR-V directly so using <code>vk_shader_module</code> isn't strictly required.</li>
+</ul>
+<p>And that's about it for now. Mesa will continue to evolve and the core Vulkan runtime code and best practices will evolve with it. New stuff is getting added constantly. By 2024 or so, we may have enough fresh material to justify another post like this. Until then, if you're developing a Vulkan driver in Mesa, best keep your eyes on merge requests tagged "vulkan" to make sure you don't miss any cool new updates that gets added. Happy hacking!</p>
+</div>
+
+<p></p>
+</div>
+
+<!-- Related Blogs -->
+
+<div class="ShowRelatedPosts">
+
+<div class="relatedBlogsWrapper">
+
+<div class="relatedBlogsHeaderWrapper">
+<h3>Related Posts</h3>
+</div>
+
+<div class="relatedBlogsContentWrapper">
+
+<div id="staticRelatedBlogs">
+
+<div class="relatedBlogsContentItemWrapper">
+<a href="news-and-blog/blog/2021/11/26/venus-on-qemu-enabling-new-virtual-vulkan-driver/" title="Venus on QEMU: Enabling the new virtual Vulkan driver"><img src="assets/images/blog/Venus-QEMU-CC.png" title="Venus on QEMU: Enabling the new virtual Vulkan driver" alt="Venus on QEMU: Enabling the new virtual Vulkan driver" /></a>
+<a href="news-and-blog/blog/2021/11/26/venus-on-qemu-enabling-new-virtual-vulkan-driver/" title="Venus on QEMU: Enabling the new virtual Vulkan driver" title="Venus on QEMU: Enabling the new virtual Vulkan driver"><h5>Venus on QEMU: Enabling the new virtual Vulkan driver</h5></a>
+</div>
+
+<div class="relatedBlogsContentItemWrapper">
+<a href="news-and-blog/news-and-events/bridging-the-opengl-and-vulkan-divide.html" title="Bridging the OpenGL and Vulkan divide"><img src="assets/images/blog/OpenGLVulkan-Divide_CC.png" title="Bridging the OpenGL and Vulkan divide" alt="Bridging the OpenGL and Vulkan divide" /></a>
+<a href="news-and-blog/news-and-events/bridging-the-opengl-and-vulkan-divide.html" title="Bridging the OpenGL and Vulkan divide" title="Bridging the OpenGL and Vulkan divide"><h5>Bridging the OpenGL and Vulkan divide</h5></a>
+</div>
+
+<div class="relatedBlogsContentItemWrapper">
+<a href="news-and-blog/news-and-events/panvk-an-open-source-vulkan-driver-for-arm-mali-midgard-and-bifrost-gpus.html" title="PanVk: An Open Source Vulkan driver for Arm Mali Midgard and Bifrost GPUs"><img src="assets/images/blog/vkcube-cc.png" title="PanVk: An Open Source Vulkan driver for Arm Mali Midgard and Bifrost GPUs" alt="PanVk: An Open Source Vulkan driver for Arm Mali Midgard and Bifrost GPUs" /></a>
+<a href="news-and-blog/news-and-events/panvk-an-open-source-vulkan-driver-for-arm-mali-midgard-and-bifrost-gpus.html" title="PanVk: An Open Source Vulkan driver for Arm Mali Midgard and Bifrost GPUs" title="PanVk: An Open Source Vulkan driver for Arm Mali Midgard and Bifrost GPUs"><h5>PanVk: An Open Source Vulkan driver for Arm Mali Midgard and Bifrost GPUs</h5></a>
+</div>
+
+
+</div>
+</div>
+</div>
+
+
+
+
+<!-- carousel version -->
+
+<div class="relatedBlogsWrapperCarousel">
+
+<div class="relatedBlogsHeaderWrapperCarousel">
+<h3>Related Posts</h3>
+</div>
+
+<div id="collabRelatedBlogs">
+
+<div class="relatedBlogsContentItemWrapperCarousel">
+<a href="news-and-blog/blog/2021/11/26/venus-on-qemu-enabling-new-virtual-vulkan-driver/" title="Venus on QEMU: Enabling the new virtual Vulkan driver"><img src="assets/images/blog/Venus-QEMU-CC.png" title="Venus on QEMU: Enabling the new virtual Vulkan driver" alt="Venus on QEMU: Enabling the new virtual Vulkan driver" /></a>
+<a href="news-and-blog/blog/2021/11/26/venus-on-qemu-enabling-new-virtual-vulkan-driver/" title="Venus on QEMU: Enabling the new virtual Vulkan driver" title="Venus on QEMU: Enabling the new virtual Vulkan driver"><h5>Venus on QEMU: Enabling the new virtual Vulkan driver</h5></a>
+</div>
+
+<div class="relatedBlogsContentItemWrapperCarousel">
+<a href="news-and-blog/news-and-events/bridging-the-opengl-and-vulkan-divide.html" title="Bridging the OpenGL and Vulkan divide"><img src="assets/images/blog/OpenGLVulkan-Divide_CC.png" title="Bridging the OpenGL and Vulkan divide" alt="Bridging the OpenGL and Vulkan divide" /></a>
+<a href="news-and-blog/news-and-events/bridging-the-opengl-and-vulkan-divide.html" title="Bridging the OpenGL and Vulkan divide" title="Bridging the OpenGL and Vulkan divide"><h5>Bridging the OpenGL and Vulkan divide</h5></a>
+</div>
+
+<div class="relatedBlogsContentItemWrapperCarousel">
+<a href="news-and-blog/news-and-events/panvk-an-open-source-vulkan-driver-for-arm-mali-midgard-and-bifrost-gpus.html" title="PanVk: An Open Source Vulkan driver for Arm Mali Midgard and Bifrost GPUs"><img src="assets/images/blog/vkcube-cc.png" title="PanVk: An Open Source Vulkan driver for Arm Mali Midgard and Bifrost GPUs" alt="PanVk: An Open Source Vulkan driver for Arm Mali Midgard and Bifrost GPUs" /></a>
+<a href="news-and-blog/news-and-events/panvk-an-open-source-vulkan-driver-for-arm-mali-midgard-and-bifrost-gpus.html" title="PanVk: An Open Source Vulkan driver for Arm Mali Midgard and Bifrost GPUs" title="PanVk: An Open Source Vulkan driver for Arm Mali Midgard and Bifrost GPUs"><h5>PanVk: An Open Source Vulkan driver for Arm Mali Midgard and Bifrost GPUs</h5></a>
+</div>
+
+</div>
+</div>
+
+<link rel="stylesheet" type="text/css" href="/assets/js/lightslider2.css">
+<script src="/assets/js/lightslider.js" type="text/javascript"></script>
+
+
+<script>
+$(document).ready(function() {
+	
+$("#collabRelatedBlogs").lightSlider({
+	item: 1,
+        autoWidth: false,
+        slideMove: 1,
+        slideMargin: 0,
+	loop: true,
+	adaptiveHeight: true
+});
+
+});
+</script>
+
+
+<!-- end of carousel version -->
+
+</div>
+
+<!-- end of Related Blogs -->
+
+
+<div class="post-comments" id="comments">
+<div class="quip">
+    <h3>Comments (3)</h3>
+	
+    <div id="quip-topofcomments-qcom"></div>
+
+    <ol class="quip-comment-list">
+    
+<!-- Jon -->
+<li class="quip-comment" id="qcom1437" >
+<div id="qcom1437-div" class="quip-comment-body ">
+<!--    
+<div class="quip-comment-right">
+        
+    </div>
+ -->
+
+    <p class="quip-comment-meta">
+        <span class="quip-comment-author">Quinten Kock:</span><br />
+        <span class="quip-comment-createdon"><a href="news-and-blog/blog/2022/03/23/how-to-write-vulkan-driver-in-2022/#qcom1437">Apr 07, 2022 at 05:46 AM</a>
+        
+        </span>
+    </p>
+ 
+    <div class="quip-comment-text">
+        <p>Very nice article, thank you very much! I've been trying to get my hands dirty with writing a Vulkan driver.<br />
+<br />
+I have noticed that there is a small mistake in nvk_CreateInstance, namely that pInstance is not used. Looking at Lavapipe told me that I needed to set it using "*pInstance = nvk_instance_to_handle(instance)", otherwise the system Vulkan loader (or vk_instance_get_proc_addr?) refuses to pick up on the instance.</p>
+ 
+<!--
+        <p><span class="quip-reply-link"><a href="*/blog-post-reply.html?quip_thread=article-b32-937&amp;quip_parent=1437">Reply to this comment in new page</a></span></p>
+-->
+
+<!-- Modal (AJAX) -->
+<!--
+<p id="notMobileCommentReplyTrigger"><a class="various fancybox.ajax blogReplyBtn" href="*/blog-post-reply.html?quip_thread=article-b32-937&amp;quip_parent=1437">Reply to this comment</a></p>
+-->
+<!-- end of Modal (AJAX) -->
+
+<!-- Not AJAX -->
+<p id="notMobileCommentReplyTrigger"><a class="various fancybox blogReplyBtn" href="*/blog-post-reply.html?quip_thread=article-b32-937&amp;quip_parent=1437">Reply to this comment</a></p>
+<!-- NOT AJAX -->
+
+<p id="isMobileCommentReplyTrigger">
+<a class="blogReplyBtn" href="*/blog-post-reply.html?quip_thread=article-b32-937&amp;quip_parent=1437">Reply to this comment</a>
+</p>
+
+
+    </div>
+ 
+
+
+
+    <div class="quip-comment-options">
+        
+        
+    </div>
+    <div class="quip-break"></div>
+</div>
+    
+
+
+</li>
+
+<!-- Jon -->
+<li class="quip-comment" id="qcom4128" >
+<div id="qcom4128-div" class="quip-comment-body quip-comment-alt">
+<!--    
+<div class="quip-comment-right">
+        
+    </div>
+ -->
+
+    <p class="quip-comment-meta">
+        <span class="quip-comment-author">Mauro Rossi:</span><br />
+        <span class="quip-comment-createdon"><a href="news-and-blog/blog/2022/03/23/how-to-write-vulkan-driver-in-2022/#qcom4128">Jul 29, 2024 at 08:10 AM</a>
+        
+        </span>
+    </p>
+ 
+    <div class="quip-comment-text">
+        <p>Hi Faith, I'm working on Android vulkan HAL for nvk (<a href="vulkan.nouveau.so" rel="nofollow">vulkan.nouveau.so</a> module)<br />
+<br />
+I am going to send a MR to mesa soon<br />
+<br />
+VF_ANDROID_native_buffer (ANB) for NVK is detected by VulkanCapsViewer<br />
+<a href="https://vulkan.gpuinfo.org/displayreport.php?id=32174" rel="nofollow">https://vulkan.gpuinfo.org/displayreport.php?id=32174</a><br />
+<br />
+and passing Android CTS dEQP-VK with these results<br />
+<br />
+Test Results:<br />
+Module		Passed	Failed	Total<br />
+dEQP-VK	568783	   116	568899<br />
+<br />
+The problem is that except VulkanCapsViewer (which is not rendering to screen by means of <a href="libvulkan.so" rel="nofollow">libvulkan.so</a> loader and <a href="vulkan.nouveau.so" rel="nofollow">vulkan.nouveau.so</a>) all the Vulkan apps I have tested present a black screen and give these errors<br />
+<br />
+07-17 00:28:36.802  2137  2137 E BufferQueueConsumer: &#91;<a href="tech.incr.vulkan" rel="nofollow">tech.incr.vulkan</a>android/<a href="tech.incr.vulkanandroid.Minima" rel="nofollow">tech.incr.vulkanandroid.Minima</a>lNativeActivity#0&#93;(id:85900000010,api:1,p:5060,c:2137) acquireBuffer: max acquired buffer count reached: 2 (max 1)<br />
+07-17 00:28:36.802  2137  2137 E BufferLayerConsumer: &#91;<a href="tech.incr.vulkan" rel="nofollow">tech.incr.vulkan</a>android/<a href="tech.incr.vulkanandroid.Minima" rel="nofollow">tech.incr.vulkanandroid.Minima</a>lNativeActivity#0&#93; updateTexImage: acquire failed: Function not implemented (-38)<br />
+<br />
+while some others vkcube and gearsvk generate these errors<br />
+<br />
+07-28 16:15:05.285  1023  1023 E RenderEngine: failed to wait on fence fd<br />
+...<br />
+07-28 16:15:05.468  1023  1023 E Layer   : &#91;Surface(name=Task=136)/@0x832783c - animation-leash#0&#93; No local sync point found<br />
+07-28 16:15:05.468  1023  1023 E Layer   : &#91;Surface(name=Task=1)/@0xd82067 - animation-leash#0&#93; No local sync point found<br />
+<br />
+Could you please provide me some additional information about Android vulkan HAL and if the current src/vulkan/runtime common code and src/vulkan/runtime/vk_physical_device_properties_gen.py should not require any custom nvk_&#91;Function&#93; and if vk_drm_syncobj.h is already implemeneted in the current src/nouveau/vulkan code?</p>
+ 
+<!--
+        <p><span class="quip-reply-link"><a href="*/blog-post-reply.html?quip_thread=article-b32-937&amp;quip_parent=4128">Reply to this comment in new page</a></span></p>
+-->
+
+<!-- Modal (AJAX) -->
+<!--
+<p id="notMobileCommentReplyTrigger"><a class="various fancybox.ajax blogReplyBtn" href="*/blog-post-reply.html?quip_thread=article-b32-937&amp;quip_parent=4128">Reply to this comment</a></p>
+-->
+<!-- end of Modal (AJAX) -->
+
+<!-- Not AJAX -->
+<p id="notMobileCommentReplyTrigger"><a class="various fancybox blogReplyBtn" href="*/blog-post-reply.html?quip_thread=article-b32-937&amp;quip_parent=4128">Reply to this comment</a></p>
+<!-- NOT AJAX -->
+
+<p id="isMobileCommentReplyTrigger">
+<a class="blogReplyBtn" href="*/blog-post-reply.html?quip_thread=article-b32-937&amp;quip_parent=4128">Reply to this comment</a>
+</p>
+
+
+    </div>
+ 
+
+
+
+    <div class="quip-comment-options">
+        
+        
+    </div>
+    <div class="quip-break"></div>
+</div>
+    <ol class="quip-comment-list"><!-- Jon -->
+<li class="quip-comment" id="qcom4129" >
+<div id="qcom4129-div" class="quip-comment-body ">
+<!--    
+<div class="quip-comment-right">
+        
+    </div>
+ -->
+
+    <p class="quip-comment-meta">
+        <span class="quip-comment-author">Faith Ekstrand:</span><br />
+        <span class="quip-comment-createdon"><a href="news-and-blog/blog/2022/03/23/how-to-write-vulkan-driver-in-2022/#qcom4129">Jul 29, 2024 at 01:33 PM</a>
+        
+        </span>
+    </p>
+ 
+    <div class="quip-comment-text">
+        <p>First off, I think it'll work better to have this discussion if you file a bug on <a href="https://gitlab.freedesktop.org/mesa/mesa/-/issues" rel="nofollow">https://gitlab.freedesktop.org/mesa/mesa/-/issues</a> and we can chat there.  The short version is that NVK shouldn't be missing anything fundamental. However, you will need to add the Android pieces. You can see examples of this in other drivers like anv_android.c, tu_android.c and radv_android.c.</p>
+ 
+<!--
+        <p><span class="quip-reply-link"><a href="*/blog-post-reply.html?quip_thread=article-b32-937&amp;quip_parent=4129">Reply to this comment in new page</a></span></p>
+-->
+
+<!-- Modal (AJAX) -->
+<!--
+<p id="notMobileCommentReplyTrigger"><a class="various fancybox.ajax blogReplyBtn" href="*/blog-post-reply.html?quip_thread=article-b32-937&amp;quip_parent=4129">Reply to this comment</a></p>
+-->
+<!-- end of Modal (AJAX) -->
+
+<!-- Not AJAX -->
+<p id="notMobileCommentReplyTrigger"><a class="various fancybox blogReplyBtn" href="*/blog-post-reply.html?quip_thread=article-b32-937&amp;quip_parent=4129">Reply to this comment</a></p>
+<!-- NOT AJAX -->
+
+<p id="isMobileCommentReplyTrigger">
+<a class="blogReplyBtn" href="*/blog-post-reply.html?quip_thread=article-b32-937&amp;quip_parent=4129">Reply to this comment</a>
+</p>
+
+
+    </div>
+ 
+
+
+
+    <div class="quip-comment-options">
+        
+        
+    </div>
+    <div class="quip-break"></div>
+</div>
+    
+
+
+</li></ol>
+
+
+</li>
+
+    </ol>
+
+    
+</div>
+<br />
+<h3>Add a Comment</h3>
+
+
+<span class="quip-success" id="quip-success-qcom"></span>
+ 
+<form id="quip-comment-preview-box-qcom" action="news-and-blog/blog/2022/03/23/how-to-write-vulkan-driver-in-2022/#quip-comment-preview-box-qcom" method="post">
+<div class="quip-comment quip-add-comment">
+    <input type="hidden" name="previewname" value="" />
+    <input type="hidden" name="thread" value="article-b32-937" />
+    <input type="hidden" name="parent" value="0" />
+    <input type="hidden" name="auth_nonce" value="" />
+    <input type="hidden" name="preview_mode" value="" />
+ 
+     <div class="quip-fld">
+        <label for="quip-comment-name-qcom">Name:</label>
+        <input type="text" name="name" id="quip-comment-name-qcom" value="" class="formField" />
+        <span class="quip-error"></span>
+        <br />
+    </div>
+     
+    <div class="quip-fld">
+        <label for="quip-comment-email-qcom">Email:</label>
+        <input type="text" name="email" id="quip-comment-email-qcom" value="" class="formField" />
+        <span class="quip-error"></span>
+       
+        <br />
+    </div>
+     
+    <div class="quip-fld">
+        <label for="quip-comment-website-qcom">Website:</label>
+        <input type="text" name="website" id="quip-comment-website-qcom" value="" class="formField" />
+        <span class="quip-error"></span>
+        <br />
+    </div>
+ 
+    <div class="quip-fld">
+<input class="tickBox" type="checkbox" value="1" name="notify" id="quip-comment-notify-qcom"  />        
+<label for="quip-comment-notify-qcom" style="width: 182px;">Notify of New Replies:</label>
+        <span class="quip-error"></span>
+        <br />
+    </div>
+ 
+
+ <div class="quip-fld quip-privacyconsent-wrapper">
+<input onchange="this.setCustomValidity(validity.valueMissing ? 'Please indicate that you have read and accept the terms of our privacy notice regarding collection/storage and usage of your personal data' : '');" name="cf_privacyconsent" id="quip-comment-privacyconsent-qcom" type="checkbox" class="required" value="Privacy Accepted" ] class="privacyCheckbox" />        
+<label for="quip-privacyconsent-qcom">Please tick this box to confirm you have read and accept the terms of our <a href="/privacy-and-cookies-policies.html" target="_blank" title="Please read our Privacy Notice before submitting this form">privacy notice</a> regarding collection/storage and usage of your personal data: *</label>
+        
+        <span class="quip-error"></span>
+        <br />
+    </div>
+
+
+
+
+  
+
+
+
+
+     
+    <p><span class="quip-allowed-tags">Allowed tags: &lt;b&gt;&lt;i&gt;&lt;br&gt;</span>Add a new comment:<span class="quip-error"></span></p>
+    <textarea name="comment" id="quip-comment-box-qcom" rows="5" class="formField"></textarea>
+     
+
+<div class="quip-fld recaptcha">
+
+<!--
+<div class="g-recaptcha" data-sitekey="6LeCpxUTAAAAAHnMggMbpA4MoD8GTmSE_4bhyDbU"></div>
+<script type="text/javascript" src="https://www.google.com/recaptcha/api.js?hl=en"></script>
+<span class="quip-error"> </span>
+-->
+
+<script src="https://js.hcaptcha.com/1/api.js" async defer></script>
+<div class="h-captcha" data-sitekey="282197ac-c29e-4ef8-bf53-b9c1a64e0ccb"></div>
+
+
+</div>
+
+
+    <!--<button type="submit" name="quip-preview" value="1">Preview</button>-->
+    <button type="submit" name="quip-post" value="1">Post</button>
+     
+    <br class="clear" />
+</div>
+</form>
+
+<!-- JS Validate privacy checkbox -->
+<script type="text/javascript" src="/assets/js/commentValidator.js"></script>
+
+</div>
+
+</div>
+
+<div class="bodyContent_2ndTier_RHS feedWrapper blogpostRHS _2016blogpostRHS">
+
+<!-- SEARCH -->
+<div class="_2016RHSPromoWrapper RHSPromoContact _2016LatestNewsFeed _2016CMSUpcomingEventsFeed notActualCaseStudyPromo newsroomSearchBoxWrapper">
+<h2>Search the newsroom</h2>
+<form class="simplesearch-search-form" action="news-and-blog/search-results.html" method="get">
+  <fieldset>
+    <label for="search">Search</label>
+    <input type="text" name="search" id="search" value="Search news & blog..."
+  onblur="if(this.value==''){ this.value='Search news & blog...';}"
+  onfocus="if(this.value=='Search news & blog...'){ this.value='';}" />
+    <input type="hidden" name="id" value="655" /> 
+    <input type="submit" value="Search" />
+  </fieldset>
+</form>
+</div>
+<!-- end of SEARCH -->
+
+<!--
+<div class="_2016RHSPromoWrapper RHSPromoCaseStudy _2016LatestBlogFeed">
+<h2>Latest Blog Posts</h2>
+<ul>
+<li>
+  <a href="news-and-blog/blog/2025/09/25/what-to-do-about-differing-product-life-cycles/">What to do about differing product life cycles</a>
+  <br /> - Sep 25, 2025
+</li>
+<li>
+  <a href="news-and-blog/blog/2025/08/06/writing-a-rust-gpu-kernel-driver-a-brief-introduction-on-how-gpu-drivers-work/">Writing a Rust GPU kernel driver: a brief introduction on how GPU drivers work</a>
+  <br /> - Aug 06, 2025
+</li>
+<li>
+  <a href="news-and-blog/blog/2025/07/22/a-practical-debugging-guide-for-media-driver-developers/">A practical debugging guide for media driver developers</a>
+  <br /> - Jul 22, 2025
+</li>
+<li>
+  <a href="news-and-blog/blog/2025/07/15/quick-notes-gstreamer-spring-hackfest-2025/">Quick notes from the GStreamer Spring Hackfest 2025</a>
+  <br /> - Jul 15, 2025
+</li>
+<li>
+  <a href="news-and-blog/blog/2025/07/03/pipewire-workshop-2025-updates-video-transport-rust-bluetooth/">PipeWire workshop 2025: Updates on video transport, Rust efforts, TSN networking, and Bluetooth support</a>
+  <br /> - Jul 03, 2025
+</li>
+</ul>
+</div>
+-->
+
+<div class="_2016RHSPromoWrapper RHSPromoCaseStudy _2016LatestNewsFeed">
+<h2>Latest Blog Posts</h2>
+<h3><a href="news-and-blog/blog/2025/09/25/what-to-do-about-differing-product-life-cycles/"  title="Navigate to read about What to do about differing product life cycles">What to do about differing product life cycles</a></h3>       
+<p class="_2016datestamp">25/09/2025</p>
+<p class="newsItem">Abandoned vendor-provided BSP roadblocks can be overcome when mainline Open Source projects like the Linux kernel are integrated directly.&#8230;</p>
+
+<h3><a href="news-and-blog/blog/2025/08/06/writing-a-rust-gpu-kernel-driver-a-brief-introduction-on-how-gpu-drivers-work/"  title="Navigate to read about Writing a Rust GPU kernel driver: a brief introduction on how GPU drivers work">Writing a Rust GPU kernel driver: a brief introduction on how GPU drivers work</a></h3>       
+<p class="_2016datestamp">06/08/2025</p>
+<p class="newsItem">This second post in the Tyr series dives deeper into GPU driver internals by using the Vulkan-based VkCube application to explain how User&#8230;</p>
+
+<h3><a href="news-and-blog/blog/2025/07/22/a-practical-debugging-guide-for-media-driver-developers/"  title="Navigate to read about A practical debugging guide for media driver developers">A practical debugging guide for media driver developers</a></h3>       
+<p class="_2016datestamp">22/07/2025</p>
+<p class="newsItem">Getting into kernel development can be daunting. There are layers upon layers of knowledge to master, but no clear roadmap, especially when&#8230;</p>
+
+<h3><a href="news-and-blog/blog/2025/07/15/quick-notes-gstreamer-spring-hackfest-2025/"  title="Navigate to read about Quick notes from the GStreamer Spring Hackfest 2025">Quick notes from the GStreamer Spring Hackfest 2025</a></h3>       
+<p class="_2016datestamp">15/07/2025</p>
+<p class="newsItem">This past May, we met with the community at the GStreamer Spring Hackfest in Nice, France, and were able to make great strides, including&#8230;</p>
+
+<h3><a href="news-and-blog/blog/2025/07/03/pipewire-workshop-2025-updates-video-transport-rust-bluetooth/"  title="Navigate to read about PipeWire workshop 2025: Updates on video transport, Rust efforts, TSN networking, and Bluetooth support">PipeWire workshop 2025: Updates on video transport, Rust efforts, TSN networking, and Bluetooth support</a></h3>       
+<p class="_2016datestamp">03/07/2025</p>
+<p class="newsItem">As part of the activities Embedded Recipes in Nice, France, Collabora hosted a PipeWire workshop/hackfest, an opportunity for attendees&#8230;</p>
+
+<h3><a href="news-and-blog/blog/2025/06/25/coccinelle-for-rust-progress-report/"  title="Navigate to read about Coccinelle for Rust progress report">Coccinelle for Rust progress report</a></h3>       
+<p class="_2016datestamp">25/06/2025</p>
+<p class="newsItem">In collaboration with Inria, the French Institute for Research in Computer Science and Automation, Tathagata Roy shares the progress made&#8230;</p>
+
+</div>
+
+
+
+<!--
+<div class="_2016RHSPromoWrapper RHSPromoContact _2016LatestBlogFeed">
+<h2>Archive Posts</h2>
+<ul>
+<li class="">
+    <a href="news-and-blog/blog/2025/09" title="September 2025">September 2025</a> <span class="count">(1)</span>
+</li>
+<li class=" arc-row-alt">
+    <a href="news-and-blog/blog/2025/08" title="August 2025">August 2025</a> <span class="count">(1)</span>
+</li>
+<li class="">
+    <a href="news-and-blog/blog/2025/07" title="July 2025">July 2025</a> <span class="count">(3)</span>
+</li>
+<li class=" arc-row-alt">
+    <a href="news-and-blog/blog/2025/06" title="June 2025">June 2025</a> <span class="count">(3)</span>
+</li>
+<li class="">
+    <a href="news-and-blog/blog/2025/05" title="May 2025">May 2025</a> <span class="count">(3)</span>
+</li>
+<li class=" arc-row-alt">
+    <a href="news-and-blog/blog/2025/04" title="April 2025">April 2025</a> <span class="count">(2)</span>
+</li>
+<li class="">
+    <a href="news-and-blog/blog/2025/02" title="February 2025">February 2025</a> <span class="count">(1)</span>
+</li>
+<li class=" arc-row-alt">
+    <a href="news-and-blog/blog/2025/01" title="January 2025">January 2025</a> <span class="count">(1)</span>
+</li>
+<li class="">
+    <a href="news-and-blog/blog/2024/12" title="December 2024">December 2024</a> <span class="count">(1)</span>
+</li>
+<li class=" arc-row-alt">
+    <a href="news-and-blog/blog/2024/10" title="October 2024">October 2024</a> <span class="count">(1)</span>
+</li>
+</ul>
+</div>
+-->
+
+
+
+
+
+
+
+</div>
+
+</div>
+</div>
+<!-- end of BODY CONTENT -->
+        
+</div>
+
+<!-- FOOTER -->
+ <div class="fullwidthWrapper2016 _2016Newfooter">
+ 
+ <div class="_2016footer2TopWrapper">
+ <div class="container">
+ <div class="_2016footer2TopCol">
+ <h4>About Collabora</h4>
+ <p>Whether writing a line of code or shaping a longer-term strategic software development plan, we'll help  you navigate the ever-evolving world of Open Source.</p>
+ <!--<p><a href="https://www.collabora.co.kr/" title="Follow this link to view the Korean version of this page" class="foreignLink">View the Korean version of Collabora.com</a></p>-->
+
+<p class="homeKRlinker">
+<a href="https://www.collabora.co.kr/" class="foreignLink"><img src="/assets/images/core/flag_kr.jpg" alt="한국의 국기" class="homeFlagImg"/>한국어 버전의 Collabora.com 보기</a></p>
+<p><a href="https://www.collabora.com/br" class="foreignLink"><img src="/assets/images/core/flag_br.jpg" alt="Bandeira de Português" class="homeFlagImg"/>Acesse Collabora.com em Português</a></p>
+
+<!--
+<p class="homeKRlinker"><a href="https://www.collabora.co.kr/" title="한국어 버전의 Collabora.com 보기" class="foreignLink"><img src="/assets/images/core/flag_kr.jpg" alt="한국어 버전의 Collabora.com 보기" class="homeFlagImg"/></a><a href="https://www.collabora.co.kr/" title="한국어 버전의 Collabora.com 보기" class="foreignLink">한국어 버전의 Collabora.com 보기</a></p>
+<p><a href="https://www.collabora.com/br" title="Acesse Collabora.com em Português" class="foreignLink"><img src="/assets/images/core/flag_br.jpg" title="Acesse Collabora.com em Português" alt="Acesse Collabora.com em Português" class="homeFlagImg"/></a><a href="https://www.collabora.com.br" title="Acesse Collabora.com em Português" class="foreignLink">Acesse Collabora.com em Português</a></p>
+-->
+
+
+ </div>
+ <div class="_2016footer2TopCol">
+ <h4>Learn more</h4>
+ <ul>
+ <li><a href="about-us/who-we-are/" title="Navigate to the Who we are page">Who we are</a></li>
+ <li><a href="services/" title="Navigate to the Services page">Services</a></li>
+ <li><a href="about-us/our-expertise.html" title="Navigate to the Our expertise page">Our expertise</a></li>
+ <li><a href="industries/" title="Navigate to the Industries page">Industries</a></li>
+ <li><a href="about-us/our-work.html" title="Navigate to the Our work page">Our work</a></li>
+ <li><a href="careers.html" title="Navigate to the Careers page">Careers</a></li>
+ <li><a href="about-us/open-source.html" title="Navigate to the Open Source page">Open Source</a></li>
+ </ul>
+ </div>
+ <div class="_2016footer2TopCol">
+
+<div class="_2016NEWFooter_SocialIconsWrapper">
+<a href="https://www.linkedin.com/company/collabora" title="External link to view Collabora on LinkedIn" target="_blank" class="socialLinkedIn"><span style="display:none;">Collabora on LinkedIn</span></a>
+<a href="https://www.youtube.com/channel/UCPh7R2PWtJHmTfSGWuLkGTg" title="External link to view Collabora on YouTube" target="_blank" class="socialYouTube"><span style="display:none;">Collabora on YouTube</span></a>
+<a href="https://floss.social/@Collabora" title="External link to view Collabora on Mastodon" target="_blank" class="socialMastodon"><span style="display:none;">Collabora on Mastodon</span></a>
+<a href="https://bsky.app/profile/collabora.com" title="External link to view Collabora on Bluesky" target="_blank" class="socialBluesky"><span style="display:none;">Collabora on Bluesky</span></a>
+<a href="https://www.facebook.com/Collaboraltd" title="External link to view Collabora on Facebook" target="_blank" class="socialFacebook"><span style="display:none;">Collabora on Facebook</span></a>
+<a href="https://www.collabora.com/feed" title="External link to view Collabora RSS Feed" target="_blank" class="socialRSS"><span style="display:none;">Collabora RSS Feed</span></a>
+
+<!--<a href="https://twitter.com/collabora" title="External link to view Collabora on Twitter" target="_blank" class="socialTwitter"><span style="display:none;">Collabora on Twitter</span></a>-->
+<!--<a href="https://plus.google.com/+Collabora" title="External link to view Collabora on Google+" target="_blank" class="socialGoogle"><span style="display:none;">Collabora on Google+</span></a>-->
+</div>
+ 
+ <p class="ContactLink"><a href="tel:+441223362967" target="_blank" title="Call Collabora today on +44 1223 362967">+44 1223 362967</a></p>
+ <p class="ContactLink"><a href="tel:+15146672499" target="_blank" title="Call Collabora today on +1 514 667 2499">+1 514 667 2499</a></p>
+ <p class="ContactLink"><a href="mailto:contact@collabora.com" target="_blank" title="Email Collabora today">contact@collabora.com</a></p>
+ </div>
+ </div>
+ </div>
+ 
+ <div class="_2016footer2BottomWrapper">
+ <div class="container">
+ 
+<div class="_2016footer2BottomRHS">
+ <img src="assets/images/2016home/OpenFirst.jpg" alt="Open Since 2005 logo" >
+ </div>
+
+ <div class="_2016footer2BottomLHS">
+ <p>Our website only uses a strictly necessary session cookie provided by our CMS system. To find out more please <a href="cookies-policy.html" title="Read more about our Cookies policy" target="_self">follow this link</a>.</p>
+    <p class="_2016footerDark">Collabora Limited © 2005-2025. All rights reserved. <a href="/privacy-notice.html" target="_self" title="View our Privacy Notice">Privacy Notice</a>. <a href="/sitemap.html" target="_self" title="View the Collabora.com sitemap">Sitemap</a>.</p>
+ </div>
+ 
+ </div>
+    
+</div>
+
+
+<!-- noscript -->
+<noscript>
+<p class="noJSPromot">To ensure the Collabora website works as designed, please enable JavaScript. Thanks</p>
+</noscript>
+<!-- end of noscript -->
+    
+</div>
+</div>
+<!--</div>-->
+
+<!-- Google Code for Remarketing Tag 21/06/2016 -->
+<!--
+<div style="display:none">
+<script type="text/javascript">
+/* <![CDATA[ */
+var google_conversion_id = 1005179042;
+var google_custom_params = window.google_tag_params;
+var google_remarketing_only = true;
+/* ]]> */
+</script>
+<script type="text/javascript" src="//www.googleadservices.com/pagead/conversion.js" async>
+</script>
+<noscript>
+<div style="display:inline;">
+<img height="1" width="1" style="border-style:none;" alt="" src="//googleads.g.doubleclick.net/pagead/viewthroughconversion/1005179042/?value=0&amp;guid=ON&amp;script=0"/>
+</div>
+</noscript>
+</div>
+-->
+<!-- end of Google Code for Remarketing Tag 21/06/2016 -->
+
+
+<!-- Google Code for Remarketing Tag 24/11/2016 -->
+<!--
+<script type="text/javascript">
+/* <![CDATA[ */
+var google_conversion_id = 1005179042;
+var google_custom_params = window.google_tag_params;
+var google_remarketing_only = true;
+/* ]]> */
+</script>
+<script type="text/javascript" src="//www.googleadservices.com/pagead/conversion.js">;
+</script>
+<noscript>
+<div style="display:inline;">
+<img height="1" width="1" style="border-style:none;" alt="" src="//googleads.g.doubleclick.net/pagead/viewthroughconversion/1005179042/?guid=ON&amp;script=0"/>
+</div>
+</noscript>
+-->
+<!-- end of Google Code for Remarketing Tag 24/11/2016 -->
+
+<!-- JS CALLS --> 
+<!--<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>-->
+
+<!-- VELOCITY -->
+<script src="/assets/js/velocity.min.js" type="text/javascript"></script>
+
+<script type="text/javascript" src="/assets/js/custom.js"></script>
+
+<script type="text/javascript" src="assets/js/2016.js"></script>
+ 
+<script type="text/javascript" src="/assets/js/css_browser_selector.js"></script> 
+<!--<script type="text/javascript" src="/assets/js/retina-1.1.0.js"></script>-->
+
+<script type="text/javascript" src="/assets/js/featherlight.min.js"></script>
+<script type="text/javascript" src="/assets/js/jquery.fancybox.min.js"></script>
+
+<!-- fancyapps lightbox -->
+<script type="text/javascript">
+$('[data-fancybox="gallery"]').fancybox({
+	animationEffect: "fade",
+        arrows: false,
+        toolbar: false,
+        infobar: false
+});
+</script>
+
+<script type="text/javascript">
+$(window).load(function(e) {
+var totalWidth = 0;
+$(".scrollableArea").children().each(function() {
+totalWidth = totalWidth + $(this).outerWidth(true);
+$(".scrollableArea").outerWidth(totalWidth);
+});
+});
+
+$(window).on("resize", function(e) {
+var totalWidth = 0;
+$(".scrollableArea").children().each(function() {
+totalWidth = totalWidth + $(this).outerWidth(true);
+$(".scrollableArea").outerWidth(totalWidth);
+});
+});
+</script>
+
+<!-- end of JS CALLS -->
+
+
+<!-- highlight js -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/default.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+<!-- support for line numbering -->
+<script src="https://cdn.jsdelivr.net/npm/highlightjs-line-numbers.js/dist/highlightjs-line-numbers.min.js"> </script>
+<script>hljs.highlightAll(); hljs.initLineNumbersOnLoad(); // apply line numbering</script>
+<!-- JWD mods -->
+<link rel="stylesheet" href="/assets/css/highlightjs_JWDmods.min.css"> 
+<script src="/assets/js/highlightjs-line-numbers_JWDmods.min.js"> </script> 
+
+</body>
+</html>

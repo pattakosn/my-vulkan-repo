@@ -1,0 +1,50 @@
+FROM debian:trixie-slim
+
+# Metadata
+LABEL maintainer="pattakosn@fastmail.com" \
+      description="debian vulkan build environment" \
+      debian.version="trixie"
+
+ENV DEBIAN_FRONTEND=noninteractive TZ=Europe/Paris
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+    bash \
+    vim \
+    build-essential \
+    clang \
+    cmake \
+    ninja-build \
+    pkg-config \
+    git \
+    wget \
+    vulkan-tools \
+    libvulkan-dev \
+    spirv-tools \
+    glslang-tools \
+    libglfw3 \
+    libglfw3-dev \
+    libsdl3-dev \
+    libglm-dev \
+    libxxf86vm-dev \
+    libxi-dev \
+    glslang-tools \
+    glslc \
+    glslang-dev \
+    libshaderc-dev \
+    libfreetype-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+#RUN apt-get update && apt-get install -y
+
+# Optional: Set environment variables for Vulkan
+ENV VK_LAYER_PATH=/usr/share/vulkan/explicit_layer.d
+
+# Set working directory
+#RUN useradd -m -u 1000 builder
+#USER builder
+#WORKDIR /home/builder
+WORKDIR /app
+
+# Default command
+CMD ["/bin/bash"]

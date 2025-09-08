@@ -1,0 +1,47 @@
+FROM debian:trixie-slim
+
+ARG USER_UID=1000
+ARG USER_GID=1000
+RUN groupadd --gid $USER_GID vscode \
+    && useradd --uid $USER_UID --gid $USER_GID -m vscode \
+    && apt-get update \
+    && apt-get install -y sudo \
+    && echo vscode ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/vscode \
+    && chmod 0440 /etc/sudoers.d/vscode
+
+# Install essential build tools and Vulkan dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    clang \
+    cmake \
+    git \
+    wget \
+    vulkan-tools \
+    libvulkan-dev \
+  #  vulkan-validationlayers-dev \
+    spirv-tools \
+    glslang-tools \
+    libglfw3 \
+    libglfw3-dev \
+    libsdl3-dev \
+    libglm-dev \
+    libxxf86vm-dev \
+    libxi-dev \
+    glslang-tools \
+    vim \
+    glslc \
+    glslang-dev \
+    libshaderc-dev \
+    libvulkan-memory-allocator-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update && apt-get install -y libfreetype-dev
+
+# Set working directory
+WORKDIR /app
+
+# Optional: Set environment variables for Vulkan
+ENV VK_LAYER_PATH=/usr/share/vulkan/explicit_layer.d
+
+# Default command
+CMD ["/bin/bash"]

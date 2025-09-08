@@ -1,0 +1,380 @@
+cmake_minimum_required(VERSION 3.30)
+
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+
+project("Modern Vulkan Cookbook" VERSION 0.1 LANGUAGES C CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+if (MSVC)
+    #ShaderMake requires this as minimum version for NRD
+    # which is required for ray tracing project
+    set(_MIN_WINDOWS_SDK_VERSION_BUILD 20348)
+endif()
+
+include(CMakePrintHelpers)
+
+
+# third party & vulkan etc
+find_package(Vulkan REQUIRED SPIRV-Tools)
+
+# Download dependencies automatically
+include(FetchContent)
+set(FETCHCONTENT_QUIET OFF)
+
+# Comparing the current Vulkan version with 1.3.275
+if (VulkanHeaderVersion2 GREATER_EQUAL 13275)
+  FetchContent_Declare(glslang
+      GIT_REPOSITORY https://github.com/KhronosGroup/glslang
+      GIT_TAG vulkan-sdk-${Vulkan_VERSION}.0)
+  if (NOT glslang_POPULATED)
+    set(ENABLE_OPT OFF)
+  endif()
+  set(GLSLANG_LIB "glslang") 
+else()
+  find_package(Vulkan REQUIRED SPIRV-Tools glslang)
+endif()
+
+include_directories(${Vulkan_INCLUDE_DIR})
+message(STATUS "Vulkan_INCLUDE_DIR: ${Vulkan_INCLUDE_DIR}")
+link_directories(${Vulkan_INCLUDE_DIR}/../lib)
+
+find_package(SPIRV-Reflect QUIET)
+if(NOT SPIRV-Reflect_FOUND)
+  FetchContent_Declare(spirvreflect
+    GIT_REPOSITORY https://github.com/KhronosGroup/SPIRV-Reflect.git
+    GIT_TAG vulkan-sdk-1.4.309
+    GIT_SHALLOW TRUE
+  )
+  set(SPIRV_REFLECT_EXECUTABLE OFF CACHE BOOL "SPIRV_REFLECT_EXE" FORCE)
+  set(SPIRV_REFLECT_EXAMPLES OFF CACHE BOOL "SPIRV_REFLECT_EXAMPLES" FORCE)
+  set(SPIRV_REFLECT_BUILD_TESTS OFF CACHE BOOL "SPIRV_REFLECT_BUILD_TESTS" FORCE)
+  set(SPIRV_REFLECT_STATIC_LIB ON CACHE BOOL "SPIRV_REFLECT_STATIC_LIB" FORCE)
+  set(SPIRV_REFLECT_STRIP_PERF_WARNINGS ON CACHE BOOL "Silence performance warnings" FORCE)
+  FetchContent_MakeAvailable(spirvreflect)
+else()
+  message(STATUS "Using system SPIRV-Reflect: ${SPIRV-Reflect_DIR}")
+endif()
+
+message(STATUS "Volk — fetching from GitHub...")
+set(VOLK_BUILD_EXAMPLES OFF CACHE BOOL "Disable Volk examples" FORCE)
+set(VOLK_PULL_IN_VULKAN OFF CACHE BOOL "Don't auto-fetch Vulkan headers" FORCE)
+FetchContent_Declare(volk
+  GIT_REPOSITORY https://github.com/zeux/volk.git
+  GIT_TAG vulkan-sdk-1.4.309
+  GIT_SHALLOW TRUE
+)
+FetchContent_MakeAvailable(volk)
+add_library(Volk::Volk ALIAS volk)
+include_directories(${volk_SOURCE_DIR})
+
+######find_package(VulkanMemoryAllocator QUIET)
+######if(NOT VulkanMemoryAllocator_FOUND)
+######  message(STATUS "VulkanMemoryAllocator not found system-wide — fetching from GitHub...")
+######  FetchContent_Declare(vma
+######    GIT_REPOSITORY https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
+######    GIT_TAG v3.3.0
+######    GIT_SHALLOW TRUE
+######  )
+######  FetchContent_MakeAvailable(vma)
+######
+######  add_library(VMA INTERFACE)
+######  target_include_directories(VMA INTERFACE ${vma_SOURCE_DIR}/include)
+######else()
+######  message(STATUS "Using system VulkanMemoryAllocator: ${VulkanMemoryAllocator_DIR}")
+######  add_library(VMA INTERFACE)
+######  target_link_libraries(VMA INTERFACE VulkanMemoryAllocator)
+######endif()
+######
+######find_package(glm QUIET)
+######if(NOT glm_FOUND)
+######  message(STATUS "GLM not found system-wide — fetching from GitHub...")
+######  FetchContent_Declare(glm
+######    GIT_REPOSITORY https://github.com/g-truc/glm.git
+######    GIT_TAG 0.9.9.8
+######    GIT_SHALLOW TRUE
+######  )
+######  FetchContent_MakeAvailable(glm)
+######  add_library(GLM INTERFACE)
+######  target_include_directories(GLM INTERFACE ${glm_SOURCE_DIR})
+######else()
+######  message(STATUS "Using system GLM: ${glm_DIR}")
+######  add_library(GLM INTERFACE)
+######  target_link_libraries(GLM INTERFACE glm)
+######endif()
+######
+######message(STATUS "GLI — fetching from GitHub...")
+######set(GLI_TEST_ENABLE OFF CACHE INTERNAL "")
+######FetchContent_Declare(gli
+######  GIT_REPOSITORY https://github.com/g-truc/gli.git
+######  GIT_TAG 0.8.2.0
+######  GIT_SHALLOW TRUE
+######)
+######FetchContent_MakeAvailable(gli)
+######add_library(GLI INTERFACE)
+######target_include_directories(GLI INTERFACE ${gli_SOURCE_DIR})
+######
+######if (NOT ANDROID)
+######  find_package(GLFW QUIET)
+######  if(NOT GLFW_FOUND)
+######    find_package(PkgConfig QUIET)
+######    pkg_check_modules(GLFW QUIET glfw3)
+######    if(NOT GLFW_FOUND)
+######      message(STATUS "GLFW not found system-wide — fetching from GitHub...")
+######      FetchContent_Declare(glfw
+######        GIT_REPOSITORY https://github.com/glfw/glfw.git
+######        GIT_TAG 3.4
+######        GIT_SHALLOW TRUE
+######      )
+######      set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+######      set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+######      set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+######      FetchContent_MakeAvailable(glfw)
+######      set(GLFW_LIB glfw)
+######    else()
+######      message(STATUS "Using system GLFW via pkg-config")
+######      add_library(glfw INTERFACE)
+######      target_include_directories(glfw INTERFACE ${GLFW_INCLUDE_DIRS})
+######      target_link_libraries(glfw INTERFACE ${GLFW_LIBRARIES})
+######    endif()
+######  else()
+######    message(STATUS "Using system GLFW: ${GLFW_DIR}")
+######    set(GLFW_LIB glfw)
+######  endif()
+######
+######  find_package(imgui QUIET)
+######  if(NOT imgui_FOUND)
+######    message(STATUS "ImGui not found system-wide — fetching from GitHub...")
+######    FetchContent_Declare(imgui
+######      GIT_REPOSITORY https://github.com/ocornut/imgui.git
+######      GIT_TAG v1.92.4
+######      GIT_SHALLOW TRUE
+######    )
+######    FetchContent_MakeAvailable(imgui)
+######    # Manually create ImGui static library
+######    add_library(ImGui STATIC
+######      ${imgui_SOURCE_DIR}/imgui.cpp
+######      ${imgui_SOURCE_DIR}/imgui_draw.cpp
+######      ${imgui_SOURCE_DIR}/imgui_demo.cpp
+######      ${imgui_SOURCE_DIR}/imgui_tables.cpp
+######      ${imgui_SOURCE_DIR}/imgui_widgets.cpp
+######      ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
+######      ${imgui_SOURCE_DIR}/backends/imgui_impl_vulkan.cpp
+######    )
+######    target_include_directories(ImGui PUBLIC
+######      ${imgui_SOURCE_DIR}
+######      ${imgui_SOURCE_DIR}/backends
+######    )
+######    target_compile_definitions(ImGui PUBLIC
+######      IMGUI_IMPL_VULKAN_NO_PROTOTYPES
+######    )
+######    target_link_libraries(ImGui PUBLIC
+######      ${GLFW_LIB}
+######      Vulkan::Vulkan
+######    )
+######    set(IMGUI_LIB ImGui)
+######  else()
+######    message(STATUS "Using system ImGui: ${imgui_DIR}")
+######    set(IMGUI_LIB imgui)
+######  endif()
+######endif()
+
+find_path(STB_INCLUDE_DIRS "stb_c_lexer.h" PATH_SUFFIXES stb)
+if(STB_INCLUDE_DIRS)
+    message(STATUS "Using system stb from ${STB_INCLUDE_DIRS}")
+else()
+    message(STATUS "Fetching stb from GitHub...")
+    FetchContent_Declare(stb
+        GIT_REPOSITORY https://github.com/nothings/stb.git
+        GIT_TAG master
+        GIT_SHALLOW TRUE
+    )
+    FetchContent_MakeAvailable(stb)
+    set(STB_INCLUDE_DIRS ${stb_SOURCE_DIR})
+endif()
+include_directories(${STB_INCLUDE_DIRS})
+
+if(TRACY_INCLUDE_DIRS)
+    message(STATUS "Using system Tracy from ${TRACY_INCLUDE_DIRS}")
+else()
+    message(STATUS "Fetching Tracy from GitHub...")
+    FetchContent_Declare(tracy
+        GIT_REPOSITORY https://github.com/wolfpld/tracy.git
+        GIT_TAG v0.12.2
+        GIT_SHALLOW TRUE
+    )
+    FetchContent_MakeAvailable(tracy)
+    set(TRACY_INCLUDE_DIRS ${tracy_SOURCE_DIR}/public)
+endif()
+include_directories(${TRACY_INCLUDE_DIRS})
+cmake_print_variables(TRACY_INCLUDE_DIRS TRACY_ENABLE)
+
+######find_path(THREADPOOL_INCLUDE_DIRS "BS_thread_pool.hpp")
+######if(THREADPOOL_INCLUDE_DIRS)
+######    message(STATUS "Using system thread-pool from ${THREADPOOL_INCLUDE_DIRS}")
+######else()
+######    message(STATUS "Fetching thread-pool from GitHub...")
+######    FetchContent_Declare(threadpool
+######        GIT_REPOSITORY https://github.com/bshoshany/thread-pool.git
+######        GIT_TAG v5.0.0
+######        GIT_SHALLOW TRUE
+######    )
+######    FetchContent_MakeAvailable(threadpool)
+######    set(THREADPOOL_INCLUDE_DIRS ${threadpool_SOURCE_DIR})
+######endif()
+######include_directories(${THREADPOOL_INCLUDE_DIRS})
+######
+######find_package(Freetype QUIET) # libfreetype-dev
+######if(NOT Freetype_FOUND)
+######    message(STATUS "Fetching FreeType from GitHub...")
+######    FetchContent_Declare(freetype
+######        GIT_REPOSITORY https://github.com/freetype/freetype.git
+######        GIT_TAG VER-2-14-1
+######        GIT_SHALLOW TRUE
+######    )
+######    set(FT_DISABLE_ZLIB ON CACHE BOOL "Disable zlib for embedded Freetype" FORCE)
+######    set(FT_DISABLE_BZIP2 ON CACHE BOOL "Disable bzip2 for embedded Freetype" FORCE)
+######    set(FT_DISABLE_PNG ON CACHE BOOL "Disable libpng for embedded Freetype" FORCE)
+######    set(FT_DISABLE_HARFBUZZ ON CACHE BOOL "Disable harfbuzz for embedded Freetype" FORCE)
+######    set(FT_DISABLE_BROTLI ON CACHE BOOL "Disable brotli for embedded Freetype" FORCE)
+######    set(BUILD_SHARED_LIBS OFF CACHE BOOL "Force static link" FORCE)
+######    FetchContent_MakeAvailable(freetype)
+######else()
+######    message(STATUS "Using system FreeType: ${FREETYPE_INCLUDE_DIRS}")
+######endif()
+######
+######FetchContent_Declare(font_demo
+######    GIT_REPOSITORY https://github.com/kocsis1david/font-demo
+######    GIT_TAG f29e61effae795c0f470e3bbb8547bf0e812e9cf
+######    GIT_SHALLOW TRUE
+######)
+######FetchContent_MakeAvailable(font_demo)
+######add_library(font-load-glyp STATIC
+######    ${font_demo_SOURCE_DIR}/geometry.c
+######    ${font_demo_SOURCE_DIR}/outline.c
+######)
+######target_compile_definitions(font-load-glyp PUBLIC FONT_DEMO_SOURCE_DIR="${font_demo_SOURCE_DIR}")
+
+#####set(ENABLE_UNIT_TESTS OFF CACHE BOOL "" FORCE)
+#####set(ENABLE_SAMPLES OFF CACHE BOOL "" FORCE)
+#####set(RAPIDJSON_BUILD_DOC OFF CACHE BOOL "" FORCE)
+#####set(RAPIDJSON_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+#####set(RAPIDJSON_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+#####FetchContent_Declare(gltfsdk
+#####    GIT_REPOSITORY https://github.com/microsoft/glTF-SDK.git
+#####    GIT_TAG r1.9.6.0
+#####    GIT_SHALLOW TRUE
+#####)
+###### This will download the SDK but not automatically add targets
+#####FetchContent_MakeAvailable(gltfsdk)
+###### Use only includes — no add_subdirectory
+#####set(GLTFSDK_INCLUDE_DIRS
+#####    "${gltfsdk_SOURCE_DIR}/GLTFSDK"
+#####    "${gltfsdk_SOURCE_DIR}/External/rapidjson/include"
+#####)
+#####add_library(glTF_SDK INTERFACE)
+######target_include_directories(glTF_SDK INTERFACE ${GLTFSDK_INCLUDE_DIRS})
+#####target_include_directories(glTF_SDK INTERFACE ${gltfsdk_SOURCE_DIR}/GLTFSDK/Inc)
+#####add_library(glTF::SDK ALIAS glTF_SDK)
+#####message(STATUS "glTF-SDK header-only includes: ${GLTFSDK_INCLUDE_DIRS}")
+
+
+######FetchContent_Declare(meshopt
+######    GIT_REPOSITORY https://github.com/zeux/meshoptimizer.git
+######    GIT_TAG v0.25
+######    GIT_SHALLOW TRUE
+######)
+######FetchContent_MakeAvailable(meshopt)
+#######add_subdirectory(${meshopt_SOURCE_DIR})
+
+FetchContent_Declare(dlss
+    GIT_REPOSITORY https://github.com/NVIDIA/DLSS.git
+    GIT_TAG v310.4.0
+    GIT_SHALLOW TRUE
+)
+FetchContent_MakeAvailable(dlss)
+set(DLSS_SRC_DIR "${dlss_SOURCE_DIR}")
+message(STATUS "DLSS source: ${DLSS_SRC_DIR}")
+set(DLSS_INCLUDE_DIR "${DLSS_SRC_DIR}/include")
+if(WIN32)
+    set(DLSS_LIB_DIR "${DLSS_SRC_DIR}/lib/Windows_x86_64/x64")
+    set(DLSS_DLL_DIR "${DLSS_SRC_DIR}/lib/Windows_x86_64/rel")
+    set(DLSS_LIB "${DLSS_LIB_DIR}/nvsdk_ngx_d.lib")
+    set(DLSS_DLL "${DLSS_DLL_DIR}/nvngx_dlss.dll")
+    if(EXISTS "${DLSS_LIB}")
+        add_library(DLSS::DLSS SHARED IMPORTED)
+        set_target_properties(DLSS::DLSS PROPERTIES
+            IMPORTED_IMPLIB "${DLSS_LIB}"
+            IMPORTED_LOCATION "${DLSS_DLL}"
+            INTERFACE_INCLUDE_DIRECTORIES "${DLSS_INCLUDE_DIR}"
+        )
+        message(STATUS "Configured DLSS for Windows: ${DLSS_LIB}")
+    else()
+        message(WARNING "DLSS Windows lib not found in ${DLSS_LIB_DIR}")
+        add_library(DLSS::DLSS INTERFACE IMPORTED)
+    endif()
+elseif(UNIX)
+    set(DLSS_LIB_DIR "${DLSS_SRC_DIR}/lib/Linux_x86_64")
+    set(DLSS_LIB_STATIC "${DLSS_LIB_DIR}/libnvsdk_ngx.a")
+    set(DLSS_SO_DIR "${DLSS_LIB_DIR}/rel")
+    set(DLSS_SHARED_LIBS
+        "${DLSS_SO_DIR}/libnvidia-ngx-dlss.so.310.4.0"
+        "${DLSS_SO_DIR}/libnvidia-ngx-dlssd.so.310.4.0"
+        "${DLSS_SO_DIR}/libnvidia-ngx-dlssg.so.310.4.0"
+    )
+    if(EXISTS "${DLSS_LIB_STATIC}")
+        add_library(DLSS::DLSS STATIC IMPORTED)
+        set_target_properties(DLSS::DLSS PROPERTIES
+            IMPORTED_LOCATION "${DLSS_LIB_STATIC}"
+            INTERFACE_INCLUDE_DIRECTORIES "${DLSS_INCLUDE_DIR}"
+        )
+        message(STATUS "Configured DLSS for Linux: ${DLSS_LIB_STATIC}")
+    else()
+        message(WARNING "DLSS static lib not found in ${DLSS_LIB_DIR}")
+        add_library(DLSS::DLSS INTERFACE IMPORTED)
+    endif()
+    # Optional: if you want to ensure the runtime .so files are found at runtime
+    # you can append their directory to the RPATH
+    set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_RPATH}:${DLSS_SO_DIR}")
+endif()
+
+set(RequiredVulkanSDKLIBS 
+    debug OSDependentd optimized OSDependent
+    debug MachineIndependentd optimized MachineIndependent
+    debug GenericCodeGend optimized GenericCodeGen
+    debug glslangd optimized glslang
+    debug SPIRVd optimized SPIRV
+    debug SPIRV-Toolsd optimized SPIRV-Tools
+    debug SPIRV-Tools-optd optimized SPIRV-Tools-opt
+    debug glslang-default-resource-limitsd optimized glslang-default-resource-limits
+    debug spirv-cross-cored optimized spirv-cross-core
+    debug spirv-cross-glsld optimized spirv-cross-glsl
+    debug spirv-cross-reflectd optimized spirv-cross-reflect)
+if (GLSLANG_LIB)
+  set(RequiredVulkanSDKLIBS 
+      debug OSDependentd optimized OSDependent
+      debug MachineIndependentd optimized MachineIndependent
+      debug GenericCodeGend optimized GenericCodeGen
+      debug glslangd optimized glslang
+      debug SPIRVd optimized SPIRV
+      debug SPIRV-Toolsd optimized SPIRV-Tools
+      debug SPIRV-Tools-optd optimized SPIRV-Tools-opt
+      debug glslang-default-resource-limitsd optimized glslang-default-resource-limits
+      debug spirv-cross-cored optimized spirv-cross-core
+      debug spirv-cross-glsld optimized spirv-cross-glsl
+      debug spirv-cross-reflectd optimized spirv-cross-reflect)
+endif()
+
+add_subdirectory(source/vulkancore)
+#####add_subdirectory(source/enginecore)
+#####if(WIN32)
+#####add_subdirectory(source/chapter1)
+#####add_subdirectory(source/chapter2)
+#####add_subdirectory(source/chapter3)
+#####add_subdirectory(source/chapter4)
+#####add_subdirectory(source/chapter5)
+#####add_subdirectory(source/chapter6)
+#####add_subdirectory(source/chapter7)
+#####endif()

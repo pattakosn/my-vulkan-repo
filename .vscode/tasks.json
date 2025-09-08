@@ -1,0 +1,19 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Docker: build vulkan-sdk-multi",
+      "type": "shell",
+      "command": "docker build -f DockerfileMulti.lunarg --build-arg VULKAN_SDK_VERSION=1.4.328.1 -t vulkan-sdk-multi:1.4.328.1 ..",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    }
+  ]
+}

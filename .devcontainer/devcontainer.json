@@ -1,0 +1,26 @@
+{
+  "name": "Vulkan Multi Lunarg Dev Container",
+  "build": {
+    "dockerfile": "../DockerfileMulti.lunarg",
+    "context": "..",
+    "args": {
+      "VULKAN_SDK_VERSION": "1.4.328.1"
+    }
+  },
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/${localWorkspaceFolderBasename},type=bind,consistency=cached",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.cpptools",
+        "ms-vscode.cmake-tools",
+        "ms-vscode.cpptools-extension-pack",
+        "twxs.cmake"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash"
+      },
+      "remoteUser": "root"
+    }
+  }
+}

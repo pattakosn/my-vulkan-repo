@@ -1,0 +1,62 @@
+#docker build -t vulkan-sdk:1.4.328.1 --build-arg VULKAN_SDK_VERSION=1.4.328.1 -f ./Dockerfile.lunarg .
+
+# Builder stage: download and install the full Vulkan SDK
+FROM debian:trixie-slim AS builder
+
+ARG VULKAN_SDK_VERSION=1.4.328.1
+ENV DEBIAN_FRONTEND=noninteractive TZ=Europe/Paris
+
+RUN  apt-get update \
+  && apt-get install -y --no-install-recommends wget xz-utils ca-certificates tar \
+       libglm-dev cmake libxcb-dri3-0 libxcb-present0 libpciaccess0 \
+       libpng-dev libxcb-keysyms1-dev libxcb-dri3-dev libx11-dev g++ gcc clang \
+       libwayland-dev libxrandr-dev libxcb-randr0-dev libxcb-ewmh-dev \
+       git python-is-python3 bison libx11-xcb-dev liblz4-dev libzstd-dev \
+       ocaml-core ninja-build pkg-config libxml2-dev wayland-protocols python3-jsonschema \
+       clang-format qtbase5-dev qt6-base-dev make ninja-build \
+  && rm -rf /var/lib/apt/lists/*
+
+RUN mkdir -p /app \
+ && cd /app \
+ && wget https://sdk.lunarg.com/sdk/download/${VULKAN_SDK_VERSION}/linux/vulkansdk-linux-x86_64-${VULKAN_SDK_VERSION}.tar.xz \
+ && tar -xJf vulkansdk-linux-x86_64-${VULKAN_SDK_VERSION}.tar.xz -C /app \
+ && /app/${VULKAN_SDK_VERSION}/vulkansdk -j 20 all \
+ && mv /app/${VULKAN_SDK_VERSION}/x86_64 /app/sdk \
+ && rm -rf /app/vulkansdk-linux-x86_64-${VULKAN_SDK_VERSION}.tar.xz /app/${VULKAN_SDK_VERSION}
+
+# Final runtime image: copy only the SDK runtime files from builder
+FROM debian:trixie-slim
+
+ARG VULKAN_SDK_VERSION=1.4.328.1
+ARG BASE_LD_LIBRARY_PATH=""
+ENV DEBIAN_FRONTEND=noninteractive TZ=Europe/Paris
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends bash make ninja-build gcc g++ clang git \
+      bash libglm-dev cmake libxcb-dri3-0 libxcb-present0 libpciaccess0 \
+       libpng-dev libxcb-keysyms1-dev libxcb-dri3-dev libx11-dev g++ gcc clang \
+       libwayland-dev libxrandr-dev libxcb-randr0-dev libxcb-ewmh-dev \
+       git  bison libx11-xcb-dev liblz4-dev libzstd-dev \
+       ocaml-core ninja-build pkg-config libxml2-dev wayland-protocols \
+       clang-format make ninja-build
+ # && rm -rf /var/lib/apt/lists/*
+
+# Copy only the SDK runtime tree produced by the builder stage
+COPY --from=builder /app/sdk /app/sdk
+
+ENV VULKAN_SDK=/app/sdk
+ENV PATH=${VULKAN_SDK}/bin:$PATH
+ENV LD_LIBRARY_PATH=${VULKAN_SDK}/lib:${BASE_LD_LIBRARY_PATH}
+ENV VK_ICD_FILENAMES=${VULKAN_SDK}/etc/vulkan/icd.d
+ENV VK_LAYER_PATH=${VULKAN_SDK}/etc/vulkan/explicit_layer.d
+
+#ARG USERNAME=vscode
+#ARG USER_UID=1000
+#ARG USER_GID=1000
+#RUN groupadd --gid $USER_GID $USERNAME || true \
+# && useradd --uid $USER_UID --gid $USER_GID -m -s /bin/bash $USERNAME \
+# && apt-get update && apt-get install -y sudo \
+# && echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/$USERNAME \
+# && chmod 0440 /etc/sudoers.d/$USERNAME
+
+CMD ["/bin/bash"]

@@ -1,0 +1,13 @@
+{
+    "name": "trixie vulkan",
+    "build": {
+        "dockerfile": "../Dockerfile",
+        "context": ".."
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": []
+        }
+    },
+    "remoteUser": "devcontainer"
+}

@@ -1,0 +1,139 @@
+{
+    "version": 3,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 21,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+            "name": "ninja-multi",
+            "hidden": true,
+            "generator": "Ninja Multi-Config",
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "cacheVariables": {
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+            }
+        },
+        {
+            "name": "lunarg-sdk",
+            "displayName": "LunarG Vulkan SDK",
+            "description": "Configure LunarG's Vulkan SDK environment",
+            "inherits": "ninja-multi",
+            "cacheVariables": {
+              "VULKAN_SDK": "$env{VULKAN_SDK}"
+            },
+            "environment": {
+              "VULKAN_SDK_PATH": "$penv{VULKAN_SDK}",
+              "PATH": "$env{VULKAN_SDK}/bin:$penv{PATH}",
+              "LD_LIBRARY_PATH": "$env{VULKAN_SDK}/lib:$penv{LD_LIBRARY_PATH}",
+              "VK_ADD_LAYER_PATH": "$env{VULKAN_SDK}/share/vulkan/explicit_layer.d:$penv{VK_ADD_LAYER_PATH}",
+              "PKG_CONFIG_PATH": "$env{VULKAN_SDK}/share/pkgconfig:$env{VULKAN_SDK}/lib/pkgconfig:$penv{PKG_CONFIG_PATH}"
+            }
+        },
+        {
+            "name": "gcc-lunarg",
+            "displayName": "gcc build with LunarG SDK",
+            "description": "gcc build with LunarG SDK",
+            "inherits": "lunarg-sdk",
+            "cacheVariables": {
+                "CMAKE_CXX_COMPILER": "g++"
+            }
+        },
+        {
+            "name": "clang-lunarg",
+            "displayName": "clang build with LunarG SDK",
+            "description": "clang build with LunarG SDK",
+            "inherits": "lunarg-sdk",
+            "cacheVariables": {
+                "CMAKE_CXX_COMPILER": "clang++"
+            }
+        },
+        {
+            "name": "gcc",
+            "displayName": "gcc build",
+            "description": "gcc build",
+            "inherits": "ninja-multi",
+            "cacheVariables": {
+                "CMAKE_CXX_COMPILER": "g++"
+            }
+        },
+        {
+            "name": "clang",
+            "displayName": "clang build",
+            "description": "clang build",
+            "inherits": "ninja-multi",
+            "cacheVariables": {
+                "CMAKE_CXX_COMPILER": "clang++"
+            }
+        },
+        {
+            "name": "profile",
+            "displayName": "gcc debug gprof build",
+            "description": "build preset using gcc + profile options",
+            "binaryDir": "${sourceDir}/build/profile",
+            "cacheVariables": {
+                "CMAKE_CXX_COMPILER": "g++",
+                "CMAKE_CXX_FLAGS_INIT": "-pg -g",
+                "CMAKE_EXE_LINKER_FLAGS_INIT": "-pg",
+                "CMAKE_CXX_FLAGS_DEBUG":"-Og -Wall -fprofile-arcs -ftest-coverage"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "gcc-dbg",
+            "displayName": "gcc debug build",
+            "configurePreset": "gcc",
+            "configuration": "Debug"
+        },
+        {
+            "name": "gcc-rel",
+            "displayName": "gcc release build",
+            "configurePreset": "gcc",
+            "configuration": "Release"
+        },
+        {
+            "name": "clang-dbg",
+            "displayName": "clang debug build",
+            "configurePreset": "clang",
+            "configuration": "Debug"
+        },
+        {
+            "name": "clang-rel",
+            "displayName": "clang release build",
+            "configurePreset": "clang",
+            "configuration": "Release"
+        },
+        {
+            "name": "gcc-lunarG-dbg",
+            "displayName": "gcc LunarG SDK debug build",
+            "configurePreset": "gcc-lunarg",
+            "configuration": "Debug"
+        },
+        {
+            "name": "gcc-lunarG-rel",
+            "displayName": "gcc LunarG SDK release build",
+            "configurePreset": "gcc-lunarg",
+            "configuration": "Release"
+        },
+        {
+            "name": "clang-lunarG-dbg",
+            "displayName": "clang LunarG SDK debug build",
+            "configurePreset": "clang-lunarg",
+            "configuration": "Debug"
+        },
+        {
+            "name": "clang-lunarG-rel",
+            "displayName": "clang LunarG SDK release build",
+            "configurePreset": "clang-lunarg",
+            "configuration": "Release"
+        },
+        {
+            "name": "profile-bld",
+            "displayName": "gcc LunarG SDK profile build",
+            "configurePreset": "profile",
+            "configuration": "Debug"
+        }
+    ]
+}
