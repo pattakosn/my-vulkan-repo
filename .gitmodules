@@ -7,3 +7,6 @@
 [submodule "external/Vulkan"]
 	path = external/Vulkan
 	url = https://github.com/SaschaWillems/Vulkan.git
+[submodule "external/IntroToVulkan-APIwithoutSecrets"]
+	path = external/IntroToVulkan-APIwithoutSecrets
+	url = https://github.com/GameTechDev/IntroductionToVulkan.git
