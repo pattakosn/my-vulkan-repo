@@ -333,7 +333,7 @@ void init()
         throw std::runtime_error( std::string( "Could not get the number of Instance extensions." ) );
     std::cout << "Found: " << count << " Vulkan Instance extensions:\n";
     
-    std::vector<VkExtensionProperties> instance_extensions( count );
+    std::vector<VkExtensionProperties> instance_extensions( count ); // available_extensions in the cookbook?
     result = vkEnumerateInstanceExtensionProperties( nullptr, &count, &instance_extensions[0] );
     if( (result != VK_SUCCESS) || (count == 0) )
         throw std::runtime_error( "Could not enumerate Instance extensions." );
@@ -440,6 +440,56 @@ void init()
     vkGetPhysicalDeviceQueueFamilyProperties( physical_device, &count, &queue_families[0] );
     if( count == 0 )
         throw std::runtime_error( "Could not acquire properties of queue families" );
+
+// select queue family index with desired capabilities
+    VkQueueFlags capa_req = VK_QUEUE_GRAPHICS_BIT;// | VK_QUEUE_COMPUTE_BIT | VK_QUEUE_TRANSFER_BIT; // VK_QUEUE_SPARSE_BINDING_BIT
+    uint32_t q_family_idx{9999};
+    for( uint32_t index = 0; index < static_cast<uint32_t>(queue_families.size()); ++index )
+        if( (queue_families[index].queueCount > 0) && (queue_families[index].queueFlags & capa_req ) ) {
+            q_family_idx = index;
+            break;
+        }
+    if( q_family_idx == 9999)
+        throw std::runtime_error("No queue family matching requirements found!");
+    else
+        std::cout << "Selected queue family index: " << q_family_idx << "\n";
+// Create logical device
+    struct QueueInfo {
+        uint32_t FamilyIndex;
+        std::vector<float> Priorities;
+    };
+    std::vector<QueueInfo> queue_infos;
+    std::vector<VkDeviceQueueCreateInfo> queue_create_infos;
+    for( auto & info : queue_infos ) {
+        queue_create_infos.push_back( {
+            VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+            nullptr,
+            0,
+            info.FamilyIndex,
+            static_cast<uint32_t>(info.Priorities.size()),
+            info.Priorities.size() > 0 ? &info.Priorities[0] : nullptr
+        } );
+    };
+    VkPhysicalDeviceFeatures desired_features{};
+    vkGetPhysicalDeviceFeatures(physical_device, &desired_features);
+    VkDeviceCreateInfo device_create_info = {
+        VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+        nullptr,
+        0,
+        static_cast<uint32_t>(queue_create_infos.size()),
+        queue_create_infos.size() > 0 ? &queue_create_infos[0] : nullptr,
+        0,
+        nullptr,
+        0,//static_cast<uint32_t>(instance_extensions_req.size()), // desired_extensions? THIS IS NOT OK BUT I WILL COME BACK TO IT L8R
+        nullptr,//instance_extensions_req.size() > 0 ? &instance_extensions_req[0] : nullptr,
+        &desired_features
+    };
+    VkDevice logical_device{VK_NULL_HANDLE};
+    result = vkCreateDevice( physical_device, &device_create_info, nullptr, &logical_device );
+    if( result != VK_SUCCESS ) 
+        throw std::runtime_error( "Could not create logical device" );
+    else
+        std::cout << "Created Logical device\n";
 }
 
 void deinit()
